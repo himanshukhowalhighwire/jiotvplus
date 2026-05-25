@@ -34,7 +34,7 @@ class JioMediaDrmCallback(
         uuid: java.util.UUID,
         request: androidx.media3.exoplayer.drm.ExoMediaDrm.KeyRequest
     ): ByteArray {
-        val (uniqueId, subId, accessToken, mobileNumber, ssoToken, jToken, lbCookie) = runBlocking {
+        val values = runBlocking {
             val u = dataStore.uniqueId.firstOrNull() ?: ""
             val sub = dataStore.subscriberId.firstOrNull() ?: ""
             val access = dataStore.accessToken.firstOrNull() ?: dataStore.ssoToken.firstOrNull() ?: ""
@@ -44,6 +44,14 @@ class JioMediaDrmCallback(
             val lb = dataStore.lbCookie.firstOrNull() ?: ""
             listOf(u, sub, access, mob, sso, jt, lb)
         }
+        
+        val uniqueId = values[0]
+        val subId = values[1]
+        val accessToken = values[2]
+        val mobileNumber = values[3]
+        val ssoToken = values[4]
+        val jToken = values[5]
+        val lbCookie = values[6]
 
         val cleaned = mobileNumber.replace(Regex("[^0-9]"), "")
         val rmn = android.util.Base64.encodeToString(cleaned.toByteArray(), android.util.Base64.NO_WRAP)

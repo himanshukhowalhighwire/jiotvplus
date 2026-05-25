@@ -102,7 +102,12 @@ class AuthRepository @Inject constructor(
             val encodedNumber = Base64.encodeToString(number.toByteArray(), Base64.NO_WRAP)
             
             val request = ExchangeTokenRequest(encodedNumber)
-            val response = exchangeTokenApi.exchangeToken(ssoToken, uniqueId, subscriberId, request)
+            val response = exchangeTokenApi.exchangeToken(
+                ssoToken = ssoToken,
+                deviceId = uniqueId,
+                subscriberId = subscriberId,
+                request = request
+            )
             if (response.isSuccessful) {
                 val body = response.body()
                 val token = body?.authToken ?: body?.data?.authToken

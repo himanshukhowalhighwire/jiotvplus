@@ -89,7 +89,7 @@ class PlayerViewModel @Inject constructor(
     fun getOkHttpClient() = okHttpClient
 }
 
-@OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class, androidx.tv.material3.ExperimentalTvMaterial3Api::class)
 @Composable
 fun PlayerScreen(
     channelId: String,
