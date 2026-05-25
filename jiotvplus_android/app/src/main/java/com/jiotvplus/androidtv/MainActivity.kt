@@ -54,11 +54,21 @@ class MainActivity : ComponentActivity() {
                 composable("home") {
                     HomeScreen(
                         viewModel = hiltViewModel(),
-                        onChannelClick = { channelId ->
-                            navController.navigate("player/$channelId")
+                        onCategoryClick = { categoryName ->
+                            navController.navigate("category/$categoryName")
                         },
                         onSettingsClick = {
                             navController.navigate("settings")
+                        }
+                    )
+                }
+                composable("category/{categoryName}") { backStackEntry ->
+                    val categoryName = backStackEntry.arguments?.getString("categoryName") ?: return@composable
+                    com.jiotvplus.androidtv.ui.CategoryScreen(
+                        categoryName = categoryName,
+                        viewModel = hiltViewModel(),
+                        onChannelClick = { channelId ->
+                            navController.navigate("player/$channelId")
                         }
                     )
                 }

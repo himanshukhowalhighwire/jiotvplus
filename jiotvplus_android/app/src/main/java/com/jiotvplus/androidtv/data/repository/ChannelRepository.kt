@@ -12,7 +12,10 @@ class ChannelRepository @Inject constructor(
     private val metadataApi: MetadataApi,
     private val dataStore: SettingsDataStore
 ) {
-    suspend fun getChannels(): List<Channel> {
+    private var cachedChannels: List<Channel>? = null
+
+    suspend fun getChannels(forceRefresh: Boolean = false): List<Channel> {
+        if (!forceRefresh && cachedChannels != null) return cachedChannels!!
         return try {
             val uniqueId = dataStore.uniqueId.firstOrNull() ?: return emptyList()
             val subId = dataStore.subscriberId.firstOrNull() ?: return emptyList()
@@ -20,7 +23,24 @@ class ChannelRepository @Inject constructor(
 
             val response = metadataApi.getLiveChannels(uniqueId, subId, accessToken)
             if (response.isSuccessful) {
-                response.body()?.data ?: emptyList()
+                val dataElement = response.body()?.data
+                if (dataElement == null || dataElement.isJsonNull) {
+                    return emptyList()
+                }
+                val gson = com.google.gson.Gson()
+                val listType = object : com.google.gson.reflect.TypeToken<List<Channel>>() {}.type
+                
+                val list = if (dataElement.isJsonArray) {
+                    gson.fromJson(dataElement, listType) ?: emptyList()
+                } else if (dataElement.isJsonObject) {
+                    val mapType = object : com.google.gson.reflect.TypeToken<Map<String, Channel>>() {}.type
+                    val map: Map<String, Channel>? = gson.fromJson(dataElement, mapType)
+                    map?.values?.toList() ?: emptyList()
+                } else {
+                    emptyList()
+                }
+                cachedChannels = list
+                list
             } else {
                 emptyList()
             }

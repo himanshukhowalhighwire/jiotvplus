@@ -2,8 +2,10 @@ package com.jiotvplus.androidtv.data.model
 
 import com.google.gson.annotations.SerializedName
 
+import com.google.gson.JsonElement
+
 data class ChannelResponse(
-    @SerializedName("data") val data: List<Channel>? = null
+    @SerializedName("data") val data: JsonElement? = null
 )
 
 data class Channel(

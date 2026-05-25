@@ -26,6 +26,7 @@ class SettingsDataStore @Inject constructor(private val context: Context) {
         val AUTO_PLAY = booleanPreferencesKey("auto_play")
         val AUTO_START = booleanPreferencesKey("auto_start")
         val LAST_CHANNEL_ID = stringPreferencesKey("last_channel_id")
+        val FAVORITE_CHANNELS = androidx.datastore.preferences.core.stringSetPreferencesKey("favorite_channels")
     }
 
     val ssoToken: Flow<String?> = context.dataStore.data.map { it[SSO_TOKEN] }
@@ -39,6 +40,7 @@ class SettingsDataStore @Inject constructor(private val context: Context) {
     val autoPlay: Flow<Boolean> = context.dataStore.data.map { it[AUTO_PLAY] ?: false }
     val autoStart: Flow<Boolean> = context.dataStore.data.map { it[AUTO_START] ?: false }
     val lastChannelId: Flow<String?> = context.dataStore.data.map { it[LAST_CHANNEL_ID] }
+    val favoriteChannels: Flow<Set<String>> = context.dataStore.data.map { it[FAVORITE_CHANNELS] ?: emptySet() }
 
     suspend fun saveCredentials(
         ssoToken: String?, jToken: String?, lbCookie: String?,
@@ -71,5 +73,19 @@ class SettingsDataStore @Inject constructor(private val context: Context) {
 
     suspend fun saveLastChannelId(id: String) {
         context.dataStore.edit { prefs -> prefs[LAST_CHANNEL_ID] = id }
+    }
+
+    suspend fun addFavorite(id: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[FAVORITE_CHANNELS] ?: emptySet()
+            prefs[FAVORITE_CHANNELS] = current + id
+        }
+    }
+
+    suspend fun removeFavorite(id: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[FAVORITE_CHANNELS] ?: emptySet()
+            prefs[FAVORITE_CHANNELS] = current - id
+        }
     }
 }
