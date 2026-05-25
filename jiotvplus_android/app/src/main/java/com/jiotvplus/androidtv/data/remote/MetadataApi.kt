@@ -1,0 +1,15 @@
+package com.jiotvplus.androidtv.data.remote
+
+import com.jiotvplus.androidtv.data.model.ChannelResponse
+import retrofit2.Response
+import retrofit2.http.GET
+import retrofit2.http.Header
+
+interface MetadataApi {
+    @GET("livechannels")
+    suspend fun getLiveChannels(
+        @Header("uniqueid") uniqueId: String,
+        @Header("subId") subId: String,
+        @Header("x-accesstoken") accessToken: String
+    ): Response<ChannelResponse>
+}
