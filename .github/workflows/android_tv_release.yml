@@ -7,6 +7,9 @@ on:
       - 'jiotvplus_android/**'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,38 +27,24 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x jiotvplus_android/gradlew || true
 
-    - name: Build with Gradle (Auto-download wrapper)
+    - name: Build Debug APK
       run: |
         cd jiotvplus_android
-        # Since we scaffolded manually without the wrapper jar, we download a standard one if missing
         if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
           gradle wrapper --gradle-version 8.6 || true
         fi
-        ./gradlew assembleRelease
+        ./gradlew assembleDebug
         
-    - name: Sign APK
-      uses: ilharp/sign-android-release@v1
-      # Using a dummy keystore generated on the fly for ease, since user just wants it to build & work
-      id: sign_app
-      with:
-        releaseDirectory: jiotvplus_android/app/build/outputs/apk/release
-        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-        alias: ${{ secrets.ALIAS }}
-        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-        keyPassword: ${{ secrets.KEY_PASSWORD }}
-      continue-on-error: true
-
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: jiotvplus-android-tv-release
-        path: jiotvplus_android/app/build/outputs/apk/release/*.apk
+        name: jiotvplus-android-tv-debug
+        path: jiotvplus_android/app/build/outputs/apk/debug/*.apk
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'push'
       with:
-        files: jiotvplus_android/app/build/outputs/apk/release/*.apk
+        files: jiotvplus_android/app/build/outputs/apk/debug/*.apk
         tag_name: "v1.${{ github.run_number }}"
         name: "Release v1.${{ github.run_number }}"
         draft: false
