@@ -20,5 +20,16 @@ data class PlaybackRightsResponse(
 
 data class PlaybackData(
     @SerializedName("keyURL") val keyURL: String?,
-    @SerializedName("playbackToken") val playbackToken: String?
+    @SerializedName("playbackToken") val playbackToken: String?,
+    @SerializedName("mpd") val mpd: PlaybackStreamMap?,
+    @SerializedName("m3u8") val m3u8: PlaybackStreamMap?
+)
+
+data class PlaybackStreamMap(
+    @SerializedName("auto") val auto: String?
+)
+
+data class PlaybackInfo(
+    val streamUrl: String?,
+    val keyUrl: String?
 )

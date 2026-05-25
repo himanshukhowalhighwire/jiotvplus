@@ -7,12 +7,14 @@ import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.jiotvplus.androidtv.data.model.PlaybackInfo
+
 @Singleton
 class PlaybackRepository @Inject constructor(
     private val playbackApi: PlaybackApi,
     private val dataStore: SettingsDataStore
 ) {
-    suspend fun getPlaybackRights(contentId: String): String? {
+    suspend fun getPlaybackRights(contentId: String): PlaybackInfo? {
         return try {
             val uniqueId = dataStore.uniqueId.firstOrNull() ?: return null
             val subId = dataStore.subscriberId.firstOrNull() ?: return null
@@ -45,7 +47,11 @@ class PlaybackRepository @Inject constructor(
             )
             
             if (response.isSuccessful) {
-                response.body()?.data?.keyURL
+                val data = response.body()?.data
+                if (data != null) {
+                    val streamUrl = data.mpd?.auto ?: data.m3u8?.auto
+                    PlaybackInfo(streamUrl = streamUrl, keyUrl = data.keyURL)
+                } else null
             } else {
                 null
             }

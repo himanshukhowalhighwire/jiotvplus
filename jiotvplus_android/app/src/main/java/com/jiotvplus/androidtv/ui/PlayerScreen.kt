@@ -3,7 +3,6 @@ package com.jiotvplus.androidtv.ui
 import android.net.Uri
 import android.view.ViewGroup
 import android.widget.FrameLayout
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -25,11 +24,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.dash.DashMediaSource
-import androidx.media3.exoplayer.drm.DefaultDrmSessionManagerProvider
+import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
+import androidx.media3.exoplayer.drm.FrameworkMediaDrm
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import com.jiotvplus.androidtv.data.AppConfig
 import com.jiotvplus.androidtv.data.local.SettingsDataStore
+import com.jiotvplus.androidtv.data.repository.ChannelRepository
 import com.jiotvplus.androidtv.data.repository.PlaybackRepository
 import com.jiotvplus.androidtv.player.JioMediaDrmCallback
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,21 +42,33 @@ import javax.inject.Inject
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val playbackRepository: PlaybackRepository,
+    private val channelRepository: ChannelRepository,
     private val dataStore: SettingsDataStore,
     private val okHttpClient: OkHttpClient
 ) : ViewModel() {
     
     var keyUrl by mutableStateOf<String?>(null)
+    var streamUrl by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
 
     fun fetchRights(contentId: String) {
         viewModelScope.launch {
             dataStore.saveLastChannelId(contentId)
-            val url = playbackRepository.getPlaybackRights(contentId)
-            if (url != null) {
-                keyUrl = url
+            
+            val channel = channelRepository.getChannelById(contentId)
+            if (channel?.streamUrl != null) {
+                // Direct stream URL available (e.g. Sony Liv channels)
+                streamUrl = channel.streamUrl
+                keyUrl = null // No DRM for direct HLS
             } else {
-                error = "Failed to fetch playback rights"
+                // Fetch Jio Playback Rights
+                val info = playbackRepository.getPlaybackRights(contentId)
+                if (info != null && info.streamUrl != null) {
+                    streamUrl = info.streamUrl
+                    keyUrl = info.keyUrl
+                } else {
+                    error = "Failed to fetch playback rights"
+                }
             }
         }
     }
@@ -104,55 +117,49 @@ fun PlayerScreen(
         viewModel.fetchRights(channelId)
     }
 
-    LaunchedEffect(viewModel.keyUrl) {
-        if (viewModel.keyUrl != null) {
-            val drmCallback = JioMediaDrmCallback(
-                keyUrl = viewModel.keyUrl!!,
-                dataStore = viewModel.getSettingsDataStore(),
-                okHttpClient = viewModel.getOkHttpClient()
-            )
-
-            val drmSessionManagerProvider = DefaultDrmSessionManagerProvider()
-            drmSessionManagerProvider.setDrmHttpDataSourceFactory(DefaultHttpDataSource.Factory())
-
+    LaunchedEffect(viewModel.streamUrl) {
+        if (viewModel.streamUrl != null) {
             val dataSourceFactory = DefaultHttpDataSource.Factory()
                 .setUserAgent(AppConfig.USER_AGENT)
                 .setDefaultRequestProperties(headers)
+                
+            val mediaItemBuilder = MediaItem.Builder()
+                .setUri(Uri.parse(viewModel.streamUrl))
+                
+            var drmSessionManager: DefaultDrmSessionManager? = null
 
-            val dashMediaSource = DashMediaSource.Factory(dataSourceFactory)
-                .createMediaSource(
-                    MediaItem.Builder()
-                        .setUri(Uri.parse("https://jiotv.catchup.cdn.jio.com/bpk-tv/${channelId}_Fallback/${channelId}_Fallback.mpd"))
-                        .setDrmConfiguration(
-                            MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
-                                .setLicenseUri(viewModel.keyUrl)
-                                .build()
-                        )
-                        .build()
+            if (viewModel.keyUrl != null) {
+                val drmCallback = JioMediaDrmCallback(
+                    keyUrl = viewModel.keyUrl!!,
+                    dataStore = viewModel.getSettingsDataStore(),
+                    okHttpClient = viewModel.getOkHttpClient()
                 )
 
-            // Wait, we need to inject our custom MediaDrmCallback. ExoPlayer's DefaultDrmSessionManager doesn't let us inject a callback directly through MediaItem if we use DefaultDrmSessionManagerProvider.
-            // Actually, we can use ExoPlayer.Builder and set a custom DrmSessionManager, but it's easier to create DefaultDrmSessionManager.
-            
-            val drmSessionManager = androidx.media3.exoplayer.drm.DefaultDrmSessionManager.Builder()
-                .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID, androidx.media3.exoplayer.drm.FrameworkMediaDrm.DEFAULT_PROVIDER)
-                .build(drmCallback)
-
-            val player = ExoPlayer.Builder(context).build().apply {
-                val mediaSource = DashMediaSource.Factory(dataSourceFactory)
-                    .setDrmSessionManagerProvider { drmSessionManager }
-                    .createMediaSource(
-                        MediaItem.Builder()
-                            .setUri(Uri.parse("https://jiotv.catchup.cdn.jio.com/bpk-tv/${channelId}_Fallback/${channelId}_Fallback.mpd")) // Standard JioTV+ MPD URL format, we should probably pass the URL or resolve it. 
-                            // Wait, the PHP proxy renders MPD by replacing BaseURL. If we use the raw MPD without proxy, we just need the correct URL.
-                            // In PHP's channels.php, the MPD is fetched from live.php.
-                            // Let's use the standard live URL for JioTV+ channels.
-                            .build()
-                    )
-                setMediaSource(mediaSource)
-                prepare()
-                playWhenReady = true
+                drmSessionManager = DefaultDrmSessionManager.Builder()
+                    .setUuidAndExoMediaDrmProvider(C.WIDEVINE_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                    .build(drmCallback)
+                    
+                mediaItemBuilder.setDrmConfiguration(
+                    MediaItem.DrmConfiguration.Builder(C.WIDEVINE_UUID)
+                        .setLicenseUri(viewModel.keyUrl)
+                        .build()
+                )
             }
+
+            val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
+            if (drmSessionManager != null) {
+                mediaSourceFactory.setDrmSessionManagerProvider { drmSessionManager }
+            }
+
+            val player = ExoPlayer.Builder(context)
+                .setMediaSourceFactory(mediaSourceFactory)
+                .build()
+                .apply {
+                    setMediaItem(mediaItemBuilder.build())
+                    prepare()
+                    playWhenReady = true
+                }
+                
             exoPlayer = player
         }
     }
@@ -164,7 +171,11 @@ fun PlayerScreen(
     }
 
     if (viewModel.error != null) {
-        androidx.tv.material3.Text(viewModel.error!!, color = Color.Red, modifier = Modifier.background(Color.Black).fillMaxSize())
+        androidx.tv.material3.Text(
+            text = viewModel.error!!, 
+            color = Color.Red, 
+            modifier = Modifier.background(Color.Black).fillMaxSize()
+        )
     } else {
         AndroidView(
             factory = { ctx ->

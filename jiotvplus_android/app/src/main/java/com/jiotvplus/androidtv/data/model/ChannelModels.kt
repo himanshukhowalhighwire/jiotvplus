@@ -21,17 +21,19 @@ data class Channel(
     @SerializedName("still") val still: String?,
     @SerializedName("channelNumber") val channelNumber: String?,
     @SerializedName("genres") val genres: List<String>?,
-    @SerializedName("language") val language: String?
+    @SerializedName("language") val language: String?,
+    @SerializedName("streamUrl") val streamUrl: String? = null // Used for Sony Liv direct HLS links
 ) {
     fun getResolvedId(): String = channelId ?: contentId ?: id ?: ""
     fun getResolvedName(): String = name ?: title ?: "Unknown Channel"
     fun getResolvedLogo(): String {
         val logo = channelLogo ?: logoUrl ?: image ?: thumbnail ?: still ?: ""
-        return if (logo.isNotEmpty() && !logo.startsWith("http")) {
+        val fullUrl = if (logo.isNotEmpty() && !logo.startsWith("http")) {
             "https://jiotv.catchup.cdn.jio.com/dare_images/images/$logo"
         } else {
             logo
         }
+        return fullUrl.replace("http://", "https://")
     }
     fun getResolvedCategory(): String {
         return if (!genres.isNullOrEmpty()) {
