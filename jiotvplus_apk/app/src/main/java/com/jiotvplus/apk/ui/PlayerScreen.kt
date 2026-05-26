@@ -23,7 +23,7 @@ import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.ui.PlayerView
-import androidx.tv.material3.Text
+import androidx.compose.material3.Text
 import com.jiotvplus.apk.data.local.SettingsDataStore
 import com.jiotvplus.apk.data.model.PlaybackInfo
 import com.jiotvplus.apk.data.repository.PlaybackRepository

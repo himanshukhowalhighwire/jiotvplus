@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.tv.material3.Text
+import androidx.compose.material3.Text
 import coil.compose.AsyncImage
 import com.jiotvplus.apk.data.model.Channel
 import com.jiotvplus.apk.data.repository.ChannelRepository

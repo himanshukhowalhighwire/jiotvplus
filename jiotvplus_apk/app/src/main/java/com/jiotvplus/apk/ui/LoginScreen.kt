@@ -92,7 +92,8 @@ fun LoginScreen(
                 label = { Text("Mobile Number", color = Color.White) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    textColor = Color.White,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
                     focusedBorderColor = Color.Blue,
                     unfocusedBorderColor = Color.Gray
                 ),
@@ -112,7 +113,8 @@ fun LoginScreen(
                 label = { Text("Enter OTP", color = Color.White) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    textColor = Color.White,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
                     focusedBorderColor = Color.Blue,
                     unfocusedBorderColor = Color.Gray
                 ),
