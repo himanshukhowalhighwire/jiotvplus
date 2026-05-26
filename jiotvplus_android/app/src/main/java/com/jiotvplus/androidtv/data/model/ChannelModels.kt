@@ -28,12 +28,11 @@ data class Channel(
     fun getResolvedName(): String = name ?: title ?: "Unknown Channel"
     fun getResolvedLogo(): String {
         val logo = channelLogo ?: logoUrl ?: image ?: thumbnail ?: still ?: ""
-        val fullUrl = if (logo.isNotEmpty() && !logo.startsWith("http")) {
+        return if (logo.isNotEmpty() && !logo.startsWith("http")) {
             "https://jiotv.catchup.cdn.jio.com/dare_images/images/$logo"
         } else {
             logo
         }
-        return fullUrl.replace("http://", "https://")
     }
     fun getResolvedCategory(): String {
         return if (!genres.isNullOrEmpty()) {

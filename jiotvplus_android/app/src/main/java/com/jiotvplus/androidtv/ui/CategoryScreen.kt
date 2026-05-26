@@ -124,29 +124,32 @@ fun CategoryScreen(
                     Card(
                         onClick = { onChannelClick(channel.getResolvedId()) },
                         onLongClick = { viewModel.toggleFavorite(channel.getResolvedId()) },
-                        modifier = Modifier.size(width = 200.dp, height = 150.dp)
+                        modifier = Modifier.size(width = 140.dp, height = 100.dp)
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             Column(modifier = Modifier.fillMaxSize()) {
                                 AsyncImage(
-                                    model = channel.getResolvedLogo(),
+                                    model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                        .data(channel.getResolvedLogo())
+                                        .crossfade(true)
+                                        .build(),
                                     contentDescription = channel.getResolvedName(),
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(110.dp)
+                                        .weight(1f)
                                         .background(Color.Black)
                                 )
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(40.dp)
+                                        .height(30.dp)
                                         .background(Color(0xFF222222)),
                                     contentAlignment = Alignment.CenterStart
                                 ) {
                                     Text(
                                         text = channel.getResolvedName(),
-                                        fontSize = 14.sp,
+                                        fontSize = 12.sp,
                                         color = Color.White,
                                         modifier = Modifier.padding(horizontal = 8.dp),
                                         maxLines = 1

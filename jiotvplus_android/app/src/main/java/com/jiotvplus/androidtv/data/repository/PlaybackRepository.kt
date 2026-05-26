@@ -19,7 +19,7 @@ class PlaybackRepository @Inject constructor(
             val uniqueId = dataStore.uniqueId.firstOrNull() ?: return null
             val subId = dataStore.subscriberId.firstOrNull() ?: return null
             val accessToken = dataStore.accessToken.firstOrNull() ?: dataStore.ssoToken.firstOrNull() ?: return null
-            val mobileNumber = dataStore.mobileNumber.firstOrNull() ?: return null
+            val mobileNumber = dataStore.mobileNumber.firstOrNull() ?: "9999999999"
             
             val jToken = dataStore.jToken.firstOrNull()
             val lbCookie = dataStore.lbCookie.firstOrNull()
