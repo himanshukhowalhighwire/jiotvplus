@@ -129,10 +129,7 @@ fun CategoryScreen(
                         Box(modifier = Modifier.fillMaxSize()) {
                             Column(modifier = Modifier.fillMaxSize()) {
                                 AsyncImage(
-                                    model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
-                                        .data(channel.getResolvedLogo())
-                                        .crossfade(true)
-                                        .build(),
+                                    model = channel.getResolvedLogo(),
                                     contentDescription = channel.getResolvedName(),
                                     contentScale = ContentScale.Fit,
                                     modifier = Modifier

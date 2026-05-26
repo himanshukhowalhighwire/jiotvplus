@@ -19,6 +19,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Named
 import javax.inject.Singleton
+import java.util.concurrent.TimeUnit
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -36,34 +37,47 @@ object AppModule {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
+        // This client is ONLY used for Retrofit API calls.
+        // Do NOT add Jio-specific headers globally — they break image loading
+        // and interfere with per-request headers set via @Header annotations.
+        return OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    private fun createRetrofitOkHttpClient(): OkHttpClient {
+        // A dedicated client for Jio API calls that adds common headers
         val headerInterceptor = Interceptor { chain ->
             val request = chain.request().newBuilder()
-                .addHeader("x-apisignatures", AppConfig.X_APISIGNATURE)
-                .addHeader("x-feature-code", AppConfig.X_FEATURE_CODE)
-                .addHeader("x-api-key", AppConfig.X_API_KEY)
-                .addHeader("x-platform", AppConfig.X_PLATFORM)
-                .addHeader("x-appname", "JioTVPlus")
-                .addHeader("app-name", "RJIL_JioTVPlus")
-                .addHeader("User-Agent", AppConfig.USER_AGENT)
-                .addHeader("devicetype", "tv")
-                .addHeader("os", "android")
-                .addHeader("lbcookie", "1")
+                .header("x-apisignatures", AppConfig.X_APISIGNATURE)
+                .header("x-feature-code", AppConfig.X_FEATURE_CODE)
+                .header("x-api-key", AppConfig.X_API_KEY)
+                .header("x-platform", AppConfig.X_PLATFORM)
+                .header("x-appname", "JioTVPlus")
+                .header("app-name", "RJIL_JioTVPlus")
+                .header("User-Agent", AppConfig.USER_AGENT)
+                .header("devicetype", "tv")
+                .header("os", "android")
+                .header("lbcookie", "1")
                 .build()
             chain.proceed(request)
         }
         return OkHttpClient.Builder()
             .addInterceptor(headerInterceptor)
-            .addInterceptor(logging)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 
     @Provides
     @Singleton
     @Named("AuthRetrofit")
-    fun provideAuthRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideAuthRetrofit(): Retrofit {
         return Retrofit.Builder()
             .baseUrl(AppConfig.AUTH_BASE_URL)
-            .client(okHttpClient)
+            .client(createRetrofitOkHttpClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
@@ -76,10 +90,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideExchangeTokenApi(okHttpClient: OkHttpClient): ExchangeTokenApi {
+    fun provideExchangeTokenApi(): ExchangeTokenApi {
         val retrofit = Retrofit.Builder()
             .baseUrl(AppConfig.EXCHANGE_TOKEN_URL.substringBeforeLast("exchangetoken"))
-            .client(okHttpClient)
+            .client(createRetrofitOkHttpClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         return retrofit.create(ExchangeTokenApi::class.java)
@@ -87,10 +101,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideMetadataApi(okHttpClient: OkHttpClient): MetadataApi {
+    fun provideMetadataApi(): MetadataApi {
         val retrofit = Retrofit.Builder()
             .baseUrl(AppConfig.METADATA_BASE_URL)
-            .client(okHttpClient)
+            .client(createRetrofitOkHttpClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         return retrofit.create(MetadataApi::class.java)
@@ -98,10 +112,27 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePlaybackApi(okHttpClient: OkHttpClient): PlaybackApi {
+    fun providePlaybackApi(): PlaybackApi {
+        // Playback API needs its own client that does NOT add lbcookie:1 globally
+        // because the real lbCookie value is sent via @Header annotation
+        val headerInterceptor = Interceptor { chain ->
+            val request = chain.request().newBuilder()
+                .header("x-apisignatures", AppConfig.X_APISIGNATURE)
+                .header("x-feature-code", AppConfig.X_FEATURE_CODE)
+                .header("x-platform", AppConfig.X_PLATFORM)
+                .header("x-appname", "JioTVPlus")
+                .header("User-Agent", AppConfig.USER_AGENT)
+                .build()
+            chain.proceed(request)
+        }
+        val client = OkHttpClient.Builder()
+            .addInterceptor(headerInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(AppConfig.PLAYBACK_BASE_URL)
-            .client(okHttpClient)
+            .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         return retrofit.create(PlaybackApi::class.java)

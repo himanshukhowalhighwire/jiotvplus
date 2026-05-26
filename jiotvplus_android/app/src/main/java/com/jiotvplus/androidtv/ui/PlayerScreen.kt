@@ -86,9 +86,11 @@ class PlayerViewModel @Inject constructor(
             "x-appname" to "JioTVPlus",
             "x-page" to "Player",
             "x-analytic-restriction" to "0",
+            "x-platform" to AppConfig.X_PLATFORM,
             "x-accesstoken" to accessToken,
             "uniqueid" to uniqueId,
-            "subId" to subId
+            "subId" to subId,
+            "User-Agent" to AppConfig.USER_AGENT
         )
         if (jToken.isNotEmpty()) headers["jToken"] = jToken
         if (lbCookie.isNotEmpty()) headers["lbCookie"] = lbCookie
@@ -131,6 +133,7 @@ fun PlayerScreen(
             if (viewModel.keyUrl != null) {
                 val drmCallback = JioMediaDrmCallback(
                     keyUrl = viewModel.keyUrl!!,
+                    channelId = channelId,
                     dataStore = viewModel.getSettingsDataStore(),
                     okHttpClient = viewModel.getOkHttpClient()
                 )

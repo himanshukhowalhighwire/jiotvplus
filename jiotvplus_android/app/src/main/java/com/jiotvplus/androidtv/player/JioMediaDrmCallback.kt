@@ -14,6 +14,7 @@ import java.io.IOException
 
 class JioMediaDrmCallback(
     private val keyUrl: String,
+    private val channelId: String,
     private val dataStore: SettingsDataStore,
     private val okHttpClient: OkHttpClient
 ) : androidx.media3.exoplayer.drm.MediaDrmCallback {
@@ -66,6 +67,7 @@ class JioMediaDrmCallback(
             
         if (isLegacy) {
             builder.header("srno", "23061A22C051410")
+            builder.header("channelid", channelId)
             builder.header("versionCode", "2072")
             builder.header("os", "android")
             builder.header("devicetype", "tv")

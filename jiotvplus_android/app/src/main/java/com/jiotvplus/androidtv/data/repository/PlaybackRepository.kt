@@ -1,19 +1,23 @@
 package com.jiotvplus.androidtv.data.repository
 
 import com.jiotvplus.androidtv.data.local.SettingsDataStore
+import com.jiotvplus.androidtv.data.model.PlaybackInfo
 import com.jiotvplus.androidtv.data.model.PlaybackRightsRequest
 import com.jiotvplus.androidtv.data.remote.PlaybackApi
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
-
-import com.jiotvplus.androidtv.data.model.PlaybackInfo
 
 @Singleton
 class PlaybackRepository @Inject constructor(
     private val playbackApi: PlaybackApi,
     private val dataStore: SettingsDataStore
 ) {
+    private val gson = Gson()
+
     suspend fun getPlaybackRights(contentId: String): PlaybackInfo? {
         return try {
             val uniqueId = dataStore.uniqueId.firstOrNull() ?: return null
@@ -49,14 +53,33 @@ class PlaybackRepository @Inject constructor(
             if (response.isSuccessful) {
                 val data = response.body()?.data
                 if (data != null) {
-                    val streamUrl = data.mpd?.auto ?: data.m3u8?.auto
-                    PlaybackInfo(streamUrl = streamUrl, keyUrl = data.keyURL)
-                } else null
+                    // Extract stream URL: prefer mpd.auto, fallback to m3u8.auto
+                    // Exactly as in PHP live.php lines 26-30
+                    val mpdAuto = data.mpd?.auto
+                    val m3u8Auto = data.m3u8?.auto
+                    
+                    val streamUrl = if (!mpdAuto.isNullOrEmpty()) mpdAuto
+                                   else if (!m3u8Auto.isNullOrEmpty()) m3u8Auto
+                                   else null
+                    
+                    val keyUrl = data.keyURL
+                    
+                    if (streamUrl != null) {
+                        PlaybackInfo(streamUrl = streamUrl, keyUrl = keyUrl)
+                    } else {
+                        android.util.Log.e("PlaybackRepo", "No stream URL found in playback rights response")
+                        null
+                    }
+                } else {
+                    android.util.Log.e("PlaybackRepo", "data field is null in playback rights response")
+                    null
+                }
             } else {
+                android.util.Log.e("PlaybackRepo", "Playback API returned code: ${response.code()} body: ${response.errorBody()?.string()}")
                 null
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("PlaybackRepo", "Exception fetching playback rights", e)
             null
         }
     }

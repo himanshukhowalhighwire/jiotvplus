@@ -21,6 +21,7 @@ interface PlaybackApi {
         @Header("Cookie") cookie: String?,
         @Header("x-page") xPage: String = "Player",
         @Header("x-analytic-restriction") xAnalyticRestriction: String = "0",
+        @Header("Content-Type") contentType: String = "application/json",
         @Body request: PlaybackRightsRequest
     ): Response<PlaybackRightsResponse>
 }
