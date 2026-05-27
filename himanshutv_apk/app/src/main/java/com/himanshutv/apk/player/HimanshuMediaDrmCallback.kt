@@ -67,14 +67,44 @@ class HimanshuMediaDrmCallback(
                 builder.header("playbackToken", playbackToken ?: "")
                 builder.header("ssotoken", ssoToken)
             } else {
+                val cal = java.util.Calendar.getInstance()
+                val generatedSrno = String.format(
+                    java.util.Locale.US,
+                    "%02d%02d%02d%02d%02d%03d",
+                    cal.get(java.util.Calendar.YEAR) % 100,
+                    cal.get(java.util.Calendar.MONTH) + 1,
+                    cal.get(java.util.Calendar.DAY_OF_MONTH),
+                    cal.get(java.util.Calendar.HOUR_OF_DAY),
+                    cal.get(java.util.Calendar.MINUTE),
+                    cal.get(java.util.Calendar.MILLISECOND)
+                )
                 builder.header("x-accesstoken", accessToken)
+                builder.header("accesstoken", accessToken)
+                builder.header("ssotoken", ssoToken)
                 builder.header("uniqueid", uniqueId)
+                builder.header("uniqueId", uniqueId)
+                builder.header("deviceId", uniqueId)
                 builder.header("subId", subscriberId)
+                builder.header("subscriberId", subscriberId)
+                builder.header("crmid", subscriberId)
+                builder.header("userId", subscriberId)
+                builder.header("channelid", channelId)
+                builder.header("channel_id", channelId)
+                builder.header("srno", generatedSrno)
+                builder.header("appName", "RJIL_JioTVPlus")
+                builder.header("x-appname", "JioTVPlus")
+                builder.header("appname", "RJIL_JioTVPlus")
+                builder.header("app-name", "RJIL_JioTVPlus")
+                builder.header("x-platform", "smartandroidtv")
                 builder.header("x-api-key", AppConfig.X_API_KEY)
+                builder.header("x-apisignatures", AppConfig.X_APISIGNATURE)
+                builder.header("x-feature-code", AppConfig.X_FEATURE_CODE)
                 builder.header("devicetype", "tv")
                 builder.header("os", "android")
+                builder.header("osVersion", "9")
+                builder.header("usergroup", "474537347347373")
+                builder.header("versionCode", "2072")
                 builder.header("lbcookie", "1")
-                builder.header("deviceId", uniqueId)
                 builder.header("Authorization", "Bearer $accessToken")
                 builder.header("rmn", encodedRmn)
                 if (jToken != null) builder.header("jToken", jToken)
