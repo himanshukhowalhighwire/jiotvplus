@@ -32,6 +32,7 @@ interface ExchangeTokenApi {
         @Header("ssotoken") ssoToken: String,
         @Header("deviceid") deviceId: String,
         @Header("subscriberid") subscriberId: String,
+        @Header("appname") appNameHeader: String = "RJIL_JioTVPlus",
         @Header("persistentRefreshToken") persistentRefreshToken: String = "true",
         @Header("x-platform") xPlatform: String = "jiotvplus-androidtv",
         @Body request: ExchangeTokenRequest

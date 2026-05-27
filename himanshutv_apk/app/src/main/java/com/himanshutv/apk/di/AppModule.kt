@@ -53,6 +53,7 @@ object AppModule {
                 .header("x-platform", AppConfig.X_PLATFORM)
                 .header("x-appname", "JioTVPlus")
                 .header("app-name", "RJIL_JioTVPlus")
+                .header("appname", "RJIL_JioTVPlus")
                 .header("User-Agent", AppConfig.USER_AGENT)
                 .header("devicetype", "tv")
                 .header("os", "android")

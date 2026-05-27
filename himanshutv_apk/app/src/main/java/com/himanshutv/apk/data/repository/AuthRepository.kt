@@ -73,6 +73,7 @@ class AuthRepository @Inject constructor(
                         ssoToken = ssoToken!!,
                         deviceId = deviceId,
                         subscriberId = subId,
+                        appNameHeader = "RJIL_JioTVPlus",
                         request = ExchangeTokenRequest(base64Number)
                     )
 
