@@ -217,6 +217,16 @@ class PlayerViewModel @Inject constructor(
 
         player.setMediaSource(mediaSource)
         player.prepare()
+        player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onPlayerError(playbackError: androidx.media3.common.PlaybackException) {
+                var rootCause: Throwable? = playbackError
+                while (rootCause?.cause != null) {
+                    rootCause = rootCause.cause
+                }
+                val causeMessage = rootCause?.message ?: playbackError.message
+                error = "Playback Error (${playbackError.errorCodeName}): $causeMessage"
+            }
+        })
         player.playWhenReady = true
         return player
     }
