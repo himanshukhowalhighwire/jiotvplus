@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'jiotvplus_apk/**'
+      - 'himanshutv_apk/**'
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
 
     - name: Build Debug APK
       run: |
-        cd jiotvplus_apk
+        cd himanshutv_apk
         if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
           gradle wrapper --gradle-version 8.6 || true
         fi
@@ -36,15 +36,16 @@ jobs:
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: jiotvplus-apk-debug
-        path: jiotvplus_apk/app/build/outputs/apk/debug/*.apk
+        name: himanshutv-apk-debug
+        path: himanshutv_apk/app/build/outputs/apk/debug/*.apk
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        files: jiotvplus_apk/app/build/outputs/apk/debug/*.apk
+        files: himanshutv_apk/app/build/outputs/apk/debug/*.apk
         tag_name: "v1.${{ github.run_number }}"
         name: "Release v1.${{ github.run_number }}"
         draft: false
         prerelease: false
         generate_release_notes: true
+
