@@ -162,6 +162,9 @@ class PlayerViewModel @Inject constructor(
             headers["Cookie"] = if (currentCookie.isNotEmpty()) "$currentCookie; lbCookie=$lbCookieVal" else "lbCookie=$lbCookieVal"
         }
 
+        android.util.Log.d("PLAYER_SCREEN", "Stream URL: $streamUrl")
+        android.util.Log.d("PLAYER_SCREEN", "Stream Headers: $headers")
+
         val dataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(headers)

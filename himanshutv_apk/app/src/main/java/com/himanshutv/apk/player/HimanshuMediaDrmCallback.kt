@@ -116,11 +116,22 @@ class HimanshuMediaDrmCallback(
 
             val okReq = builder.build()
             try {
+                android.util.Log.d("DRM_CALLBACK", "DRM Request URL: $keyUrl")
+                android.util.Log.d("DRM_CALLBACK", "DRM Request Headers: ${okReq.headers}")
                 okHttpClient.newCall(okReq).execute().use { resp ->
+                    val code = resp.code
+                    android.util.Log.d("DRM_CALLBACK", "DRM Response Code: $code")
+                    if (!resp.isSuccessful) {
+                        val errorBody = resp.peekBody(2048).string()
+                        android.util.Log.e("DRM_CALLBACK", "DRM Response Error Body: $errorBody")
+                        throw java.io.IOException("DRM Server returned code $code: $errorBody")
+                    }
                     responseBytes = resp.body?.bytes() ?: ByteArray(0)
+                    android.util.Log.d("DRM_CALLBACK", "DRM Response Bytes size: ${responseBytes.size}")
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                android.util.Log.e("DRM_CALLBACK", "Error in executeKeyRequest", e)
+                throw e
             }
         }
         return responseBytes
