@@ -66,6 +66,7 @@ class PlayerViewModel @Inject constructor(
         val dataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
             .setUserAgent("JioTV.Plus/2.6.1 (Linux; Android 9; JioSTB Build/PI; wv) ExoPlayerLib/2.19.1")
+            .setDefaultRequestProperties(mapOf("x-platform" to "smartandroidtv"))
 
         val mediaItemBuilder = MediaItem.Builder()
             .setUri(streamUrl)

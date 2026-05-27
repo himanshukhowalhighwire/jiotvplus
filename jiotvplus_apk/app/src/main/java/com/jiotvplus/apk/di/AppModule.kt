@@ -109,24 +109,9 @@ object AppModule {
     @Provides
     @Singleton
     fun providePlaybackApi(): PlaybackApi {
-        val headerInterceptor = Interceptor { chain ->
-            val request = chain.request().newBuilder()
-                .header("x-apisignatures", AppConfig.X_APISIGNATURE)
-                .header("x-feature-code", AppConfig.X_FEATURE_CODE)
-                .header("x-platform", AppConfig.X_PLATFORM)
-                .header("x-appname", "JioTVPlus")
-                .header("User-Agent", AppConfig.USER_AGENT)
-                .build()
-            chain.proceed(request)
-        }
-        val client = OkHttpClient.Builder()
-            .addInterceptor(headerInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .build()
         val retrofit = Retrofit.Builder()
             .baseUrl(AppConfig.PLAYBACK_BASE_URL)
-            .client(client)
+            .client(createRetrofitOkHttpClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         return retrofit.create(PlaybackApi::class.java)

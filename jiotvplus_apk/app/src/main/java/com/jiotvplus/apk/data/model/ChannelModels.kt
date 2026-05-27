@@ -29,11 +29,16 @@ data class Channel(
     }
 
     fun getResolvedLogo(): String {
-        var logo = channelLogo ?: logoUrl ?: image ?: thumbnail ?: still ?: ""
-        if (logo.isNotEmpty() && !logo.startsWith("http")) {
-            logo = "https://jiotv.catchup.cdn.jio.com/dare_images/images/$logo"
+        val candidates = listOf(channelLogo, logoUrl, image, thumbnail, still)
+        for (candidate in candidates) {
+            if (!candidate.isNullOrEmpty()) {
+                if (candidate.startsWith("http")) {
+                    return candidate
+                }
+                return "https://jiotv.catchup.cdn.jio.com/dare_images/images/$candidate"
+            }
         }
-        return logo
+        return ""
     }
 
     fun getResolvedCategory(): String {

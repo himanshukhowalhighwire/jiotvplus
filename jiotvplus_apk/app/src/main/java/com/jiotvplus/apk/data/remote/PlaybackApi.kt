@@ -19,9 +19,10 @@ interface PlaybackApi {
         @Header("jToken") jToken: String?,
         @Header("lbCookie") lbCookie: String?,
         @Header("Cookie") cookie: String?,
-        @Header("x-page") xPage: String = "Player",
-        @Header("x-analytic-restriction") xAnalyticRestriction: String = "0",
-        @Header("Content-Type") contentType: String = "application/json",
+        @Header("deviceId") deviceId: String,
+        @Header("restriction") restriction: String,
+        @Header("x-page") xPage: String,
+        @Header("x-analytic-restriction") xAnalyticRestriction: String,
         @Body request: PlaybackRightsRequest
     ): Response<PlaybackRightsResponse>
 }

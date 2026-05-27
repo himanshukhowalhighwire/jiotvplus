@@ -44,6 +44,10 @@ class PlaybackRepository @Inject constructor(
                 jToken = jToken,
                 lbCookie = lbCookie,
                 cookie = cookieHeader,
+                deviceId = uniqueId,
+                restriction = "0",
+                xPage = "Player",
+                xAnalyticRestriction = "0",
                 request = request
             )
             

@@ -30,24 +30,24 @@ data class Platform(
 )
 
 data class VerifyOtpResponse(
-    @SerializedName("ssoToken") val ssoToken: String?,
-    @SerializedName("jToken") val jToken: String?,
-    @SerializedName("lbCookie") val lbCookie: String?,
-    @SerializedName("subscriberId") val subscriberId: String?,
+    @SerializedName("ssoToken", alternate = ["ssotoken"]) val ssoToken: String?,
+    @SerializedName("jToken", alternate = ["jtoken"]) val jToken: String?,
+    @SerializedName("lbCookie", alternate = ["lbcookie"]) val lbCookie: String?,
+    @SerializedName("subscriberId", alternate = ["subscriberid"]) val subscriberId: String?,
     @SerializedName("sessionAttributes") val sessionAttributes: SessionAttributes?
 )
 
 data class SessionAttributes(
-    @SerializedName("lbCookie") val lbCookie: String?,
+    @SerializedName("lbCookie", alternate = ["lbcookie"]) val lbCookie: String?,
     @SerializedName("user") val user: User?
 )
 
 data class User(
-    @SerializedName("ssoToken") val ssoToken: String?,
-    @SerializedName("jToken") val jToken: String?,
-    @SerializedName("lbCookie") val lbCookie: String?,
-    @SerializedName("subscriberId") val subscriberId: String?,
-    @SerializedName("unique") val unique: String?
+    @SerializedName("ssoToken", alternate = ["ssotoken"]) val ssoToken: String?,
+    @SerializedName("jToken", alternate = ["jtoken"]) val jToken: String?,
+    @SerializedName("lbCookie", alternate = ["lbcookie"]) val lbCookie: String?,
+    @SerializedName("subscriberId", alternate = ["subscriberid"]) val subscriberId: String?,
+    @SerializedName("unique", alternate = ["uniqueId", "uniqueid"]) val unique: String?
 )
 
 data class ExchangeTokenRequest(
