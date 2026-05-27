@@ -15,7 +15,7 @@ data class VerifyOtpRequest(
 )
 
 data class DeviceInfo(
-    @SerializedName("consumptionDeviceName") val consumptionDeviceName: String = "HimanshuTVAndroidTV",
+    @SerializedName("consumptionDeviceName") val consumptionDeviceName: String = "JioTVPlusAndroidTV",
     @SerializedName("info") val info: Info = Info()
 )
 
@@ -26,7 +26,7 @@ data class Info(
 )
 
 data class Platform(
-    @SerializedName("name") val name: String = "HimanshuTVAndroidTV"
+    @SerializedName("name") val name: String = "JioTVPlusAndroidTV"
 )
 
 data class VerifyOtpResponse(

@@ -33,7 +33,7 @@ interface ExchangeTokenApi {
         @Header("deviceid") deviceId: String,
         @Header("subscriberid") subscriberId: String,
         @Header("persistentRefreshToken") persistentRefreshToken: String = "true",
-        @Header("x-platform") xPlatform: String = "himanshutv-androidtv",
+        @Header("x-platform") xPlatform: String = "jiotvplus-androidtv",
         @Body request: ExchangeTokenRequest
     ): Response<ExchangeTokenResponse>
 }
