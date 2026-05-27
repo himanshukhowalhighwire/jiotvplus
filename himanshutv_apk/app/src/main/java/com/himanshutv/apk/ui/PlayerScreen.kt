@@ -24,6 +24,7 @@ import androidx.media3.exoplayer.drm.DefaultDrmSessionManager
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.ui.PlayerView
 import androidx.compose.material3.Text
+import com.himanshutv.apk.data.AppConfig
 import com.himanshutv.apk.data.local.SettingsDataStore
 import com.himanshutv.apk.data.model.PlaybackInfo
 import com.himanshutv.apk.data.repository.PlaybackRepository
@@ -119,7 +120,7 @@ class PlayerViewModel @Inject constructor(
         )
 
         val headers = mutableMapOf(
-            "User-Agent" to "okhttp/4.2.2",
+            "User-Agent" to AppConfig.USER_AGENT,
             "appkey" to "NzNiMDhlYzQyNjJm",
             "appName" to "RJIL_JioTV",
             "devicetype" to "phone",
