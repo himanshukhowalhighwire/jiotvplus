@@ -1,7 +1,9 @@
 package com.himanshutv.apk.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -11,6 +13,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -21,6 +26,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.Text
 import coil.compose.AsyncImage
+import com.himanshutv.apk.data.local.SettingsDataStore
 import com.himanshutv.apk.data.model.Channel
 import com.himanshutv.apk.data.repository.ChannelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,13 +35,17 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CategoryViewModel @Inject constructor(
-    private val channelRepository: ChannelRepository
+    private val channelRepository: ChannelRepository,
+    private val dataStore: SettingsDataStore
 ) : ViewModel() {
     var channelsByCategory by mutableStateOf<Map<String, List<Channel>>>(emptyMap())
     var isLoading by mutableStateOf(true)
+    var lastSelectedChannelId by mutableStateOf<String?>(null)
+    var replayLastChannelEnabled by mutableStateOf(false)
 
     init {
         loadChannels()
+        loadSettings()
     }
 
     private fun loadChannels() {
@@ -46,6 +56,20 @@ class CategoryViewModel @Inject constructor(
             isLoading = false
         }
     }
+
+    private fun loadSettings() {
+        viewModelScope.launch {
+            dataStore.replayLastChannel.collect { enabled ->
+                replayLastChannelEnabled = enabled
+            }
+        }
+    }
+
+    fun setReplayLastChannel(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.setReplayLastChannel(enabled)
+        }
+    }
 }
 
 @Composable
@@ -53,6 +77,8 @@ fun CategoryScreen(
     viewModel: CategoryViewModel = viewModel(),
     onChannelSelected: (Channel) -> Unit
 ) {
+    var showSettingsDialog by remember { mutableStateOf(false) }
+
     if (viewModel.isLoading) {
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)), contentAlignment = Alignment.Center) {
             Text("Loading Channels...", color = Color.White)
@@ -60,34 +86,179 @@ fun CategoryScreen(
         return
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF141414)),
-        contentPadding = PaddingValues(24.dp)
-    ) {
-        item {
-            Text(
-                "HimanshuTV",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
-        }
-        viewModel.channelsByCategory.forEach { (category, channels) ->
+    val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF141414)),
+            contentPadding = PaddingValues(24.dp)
+        ) {
             item {
-                Text(
-                    text = category,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(end = 24.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    items(channels) { channel ->
-                        ChannelCard(channel = channel, onClick = { onChannelSelected(channel) })
+                    Text(
+                        "HimanshuTV",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+
+                    var isSettingsFocused by remember { mutableStateOf(false) }
+                    Box(
+                        modifier = Modifier
+                            .onFocusChanged { isSettingsFocused = it.isFocused }
+                            .focusable()
+                            .clickable { showSettingsDialog = true }
+                            .background(
+                                color = if (isSettingsFocused) Color.White else Color(0xFF2C2C2C),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = if (isSettingsFocused) Color.Yellow else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Settings",
+                            color = if (isSettingsFocused) Color.Black else Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            viewModel.channelsByCategory.forEach { (category, channels) ->
+                item {
+                    Text(
+                        text = category,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(end = 24.dp)
+                    ) {
+                        items(channels) { channel ->
+                            val focusRequester = focusRequesters.getOrPut(channel.getResolvedId()) { FocusRequester() }
+                            
+                            ChannelCard(
+                                channel = channel,
+                                focusRequester = focusRequester,
+                                onClick = {
+                                    viewModel.lastSelectedChannelId = channel.getResolvedId()
+                                    onChannelSelected(channel)
+                                }
+                            )
+
+                            LaunchedEffect(viewModel.lastSelectedChannelId) {
+                                if (viewModel.lastSelectedChannelId == channel.getResolvedId()) {
+                                    focusRequester.requestFocus()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showSettingsDialog) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    .clickable { showSettingsDialog = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(400.dp)
+                        .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(12.dp))
+                        .border(2.dp, Color.Yellow, shape = RoundedCornerShape(12.dp))
+                        .padding(24.dp)
+                        .clickable(enabled = false) {}
+                ) {
+                    Text(
+                        text = "App Settings",
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
+
+                    var isToggleFocused by remember { mutableStateOf(false) }
+                    val toggleFocusRequester = remember { FocusRequester() }
+                    LaunchedEffect(showSettingsDialog) {
+                        toggleFocusRequester.requestFocus()
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(toggleFocusRequester)
+                            .onFocusChanged { isToggleFocused = it.isFocused }
+                            .focusable()
+                            .clickable {
+                                viewModel.setReplayLastChannel(!viewModel.replayLastChannelEnabled)
+                            }
+                            .background(
+                                color = if (isToggleFocused) Color.Yellow.copy(alpha = 0.2f) else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Auto-Replay Last Channel",
+                                color = if (isToggleFocused) Color.Yellow else Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Automatically plays the last watched channel on app startup",
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                        
+                        Text(
+                            text = if (viewModel.replayLastChannelEnabled) "ENABLED" else "DISABLED",
+                            color = if (viewModel.replayLastChannelEnabled) Color.Green else Color.Red,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    var isCloseFocused by remember { mutableStateOf(false) }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .onFocusChanged { isCloseFocused = it.isFocused }
+                            .focusable()
+                            .clickable { showSettingsDialog = false }
+                            .background(
+                                color = if (isCloseFocused) Color.Yellow else Color.Gray.copy(alpha = 0.3f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 24.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = "Close",
+                            color = if (isCloseFocused) Color.Black else Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -96,14 +267,27 @@ fun CategoryScreen(
 }
 
 @Composable
-fun ChannelCard(channel: Channel, onClick: () -> Unit) {
+fun ChannelCard(
+    channel: Channel,
+    focusRequester: FocusRequester,
+    onClick: () -> Unit
+) {
+    var isFocused by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
             .width(140.dp)
             .height(100.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF2C2C2C))
-            .clickable(onClick = onClick),
+            .focusRequester(focusRequester)
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusable()
+            .clickable(onClick = onClick)
+            .background(Color(0xFF2C2C2C), shape = RoundedCornerShape(8.dp))
+            .border(
+                width = 2.dp,
+                color = if (isFocused) Color.Yellow else Color.Transparent,
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clip(RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(

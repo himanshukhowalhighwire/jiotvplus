@@ -113,7 +113,22 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun isLoggedIn(): Boolean {
-        return dataStore.accessToken.firstOrNull() != null || dataStore.ssoToken.firstOrNull() != null
+        val hasLocalToken = dataStore.accessToken.firstOrNull() != null || dataStore.ssoToken.firstOrNull() != null
+        if (hasLocalToken) return true
+
+        val restored = dataStore.tryRestoreCredentials()
+        if (restored) {
+            return dataStore.accessToken.firstOrNull() != null || dataStore.ssoToken.firstOrNull() != null
+        }
+        return false
+    }
+
+    suspend fun shouldReplayLastChannel(): Boolean {
+        return dataStore.replayLastChannel.firstOrNull() ?: false
+    }
+
+    suspend fun getLastPlayedChannelId(): String? {
+        return dataStore.lastPlayedChannelId.firstOrNull()
     }
     
     suspend fun logout() {

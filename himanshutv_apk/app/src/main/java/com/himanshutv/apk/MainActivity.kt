@@ -50,12 +50,26 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     var startDestination by remember { mutableStateOf<String?>(null) }
+                    var autoReplayId by remember { mutableStateOf<String?>(null) }
 
                     LaunchedEffect(Unit) {
-                        startDestination = if (authRepository.isLoggedIn()) {
-                            "home"
+                        if (authRepository.isLoggedIn()) {
+                            val shouldReplay = authRepository.shouldReplayLastChannel()
+                            val lastChannelId = authRepository.getLastPlayedChannelId()
+                            if (shouldReplay && !lastChannelId.isNullOrEmpty()) {
+                                autoReplayId = lastChannelId
+                            }
+                            startDestination = "home"
                         } else {
-                            "login"
+                            startDestination = "login"
+                        }
+                    }
+
+                    LaunchedEffect(startDestination, autoReplayId) {
+                        if (startDestination == "home" && autoReplayId != null) {
+                            val id = autoReplayId
+                            autoReplayId = null
+                            navController.navigate("player/$id")
                         }
                     }
 

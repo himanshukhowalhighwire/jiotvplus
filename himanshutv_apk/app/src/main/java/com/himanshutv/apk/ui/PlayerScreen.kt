@@ -2,13 +2,26 @@ package com.himanshutv.apk.ui
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.ViewModel
@@ -40,6 +53,7 @@ import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
+@UnstableApi
 class PlayerViewModel @Inject constructor(
     private val playbackRepository: PlaybackRepository,
     private val dataStore: SettingsDataStore,
@@ -53,6 +67,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             isLoading = true
             error = null
+            dataStore.saveLastPlayedChannel(contentId)
             val info = playbackRepository.getPlaybackRights(contentId)
             if (info != null && info.streamUrl != null) {
                 playbackInfo = info
@@ -60,6 +75,12 @@ class PlayerViewModel @Inject constructor(
                 error = "Failed to fetch playback rights for this channel."
             }
             isLoading = false
+        }
+    }
+
+    fun savePreferredLanguage(contentId: String, langCode: String) {
+        viewModelScope.launch {
+            dataStore.saveChannelLanguage(contentId, langCode)
         }
     }
 
@@ -94,6 +115,7 @@ class PlayerViewModel @Inject constructor(
         var encodedRmn = ""
         var jToken: String? = null
         var lbCookie: String? = null
+        var preferredLanguage: String? = null
 
         runBlocking {
             accessToken = dataStore.accessToken.firstOrNull() ?: dataStore.ssoToken.firstOrNull() ?: ""
@@ -105,6 +127,14 @@ class PlayerViewModel @Inject constructor(
             encodedRmn = android.util.Base64.encodeToString(cleaned.toByteArray(), android.util.Base64.NO_WRAP)
             jToken = dataStore.jToken.firstOrNull()
             lbCookie = dataStore.lbCookie.firstOrNull()
+            preferredLanguage = dataStore.getChannelLanguage(contentId)
+        }
+
+        if (!preferredLanguage.isNullOrEmpty()) {
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .setPreferredAudioLanguage(preferredLanguage)
+                .build()
         }
 
         val cal = Calendar.getInstance()
@@ -165,9 +195,17 @@ class PlayerViewModel @Inject constructor(
         android.util.Log.d("PLAYER_SCREEN", "Stream URL: $streamUrl")
         android.util.Log.d("PLAYER_SCREEN", "Stream Headers: $headers")
 
-        val dataSourceFactory = DefaultHttpDataSource.Factory()
+        val baseDataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(headers)
+
+        val resolver = com.himanshutv.apk.player.HimanshuStreamResolver(
+            contentId = contentId,
+            playbackRepository = playbackRepository,
+            dataStore = dataStore,
+            initialPlaybackInfo = info
+        )
+        val dataSourceFactory = androidx.media3.datasource.ResolvingDataSource.Factory(baseDataSourceFactory, resolver)
 
         val mediaItemBuilder = MediaItem.Builder()
             .setUri(streamUrl)
@@ -232,6 +270,33 @@ class PlayerViewModel @Inject constructor(
     }
 }
 
+data class AudioTrackInfo(
+    val language: String?,
+    val displayName: String
+)
+
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun getAvailableAudioTracks(player: ExoPlayer): List<AudioTrackInfo> {
+    val tracks = player.currentTracks
+    val audioTracks = mutableListOf<AudioTrackInfo>()
+    val seenLanguages = mutableSetOf<String>()
+    
+    for (group in tracks.groups) {
+        if (group.type == androidx.media3.common.C.TRACK_TYPE_AUDIO) {
+            for (i in 0 until group.length) {
+                val format = group.getTrackFormat(i)
+                val language = format.language ?: "und"
+                if (seenLanguages.add(language)) {
+                    val locale = if (language == "und") java.util.Locale.getDefault() else java.util.Locale.forLanguageTag(language)
+                    val displayName = if (language == "und") "Default" else locale.getDisplayName(java.util.Locale.US).replaceFirstChar { it.uppercase() }
+                    audioTracks.add(AudioTrackInfo(language, displayName))
+                }
+            }
+        }
+    }
+    return audioTracks
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(
@@ -240,6 +305,7 @@ fun PlayerScreen(
 ) {
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    var showAudioDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(contentId) {
         viewModel.loadStream(contentId)
@@ -264,21 +330,153 @@ fun PlayerScreen(
         } else if (viewModel.error != null) {
             Text(viewModel.error!!, color = Color.Red, fontSize = 24.sp)
         } else {
-            AndroidView(
-                factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        this.player = player
-                        useController = true
-                        keepScreenOn = true
+            Box(modifier = Modifier.fillMaxSize()) {
+                AndroidView(
+                    factory = { ctx ->
+                        PlayerView(ctx).apply {
+                            this.player = player
+                            useController = true
+                            keepScreenOn = true
+                        }
+                    },
+                    update = { view ->
+                        if (view.player != player) {
+                            view.player = player
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Floating Audio button (Top Right)
+                var isFocused by remember { mutableStateOf(false) }
+                val focusRequester = remember { FocusRequester() }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(24.dp)
+                        .focusRequester(focusRequester)
+                        .onFocusChanged { isFocused = it.isFocused }
+                        .focusable()
+                        .clickable { showAudioDialog = true }
+                        .background(
+                            color = if (isFocused) Color.White else Color.Black.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = if (isFocused) Color.Yellow else Color.Gray,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Audio",
+                        color = if (isFocused) Color.Black else Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (showAudioDialog) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.8f))
+                            .clickable { showAudioDialog = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val availableTracks = player?.let { getAvailableAudioTracks(it) } ?: emptyList()
+                        Column(
+                            modifier = Modifier
+                                .width(320.dp)
+                                .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(12.dp))
+                                .border(2.dp, Color.Yellow, shape = RoundedCornerShape(12.dp))
+                                .padding(16.dp)
+                                .clickable(enabled = false) {}
+                        ) {
+                            Text(
+                                text = "Select Audio Language",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+                            
+                            if (availableTracks.isEmpty()) {
+                                Text(
+                                    text = "No alternative audio tracks available",
+                                    color = Color.Gray,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                            } else {
+                                val firstItemFocusRequester = remember { FocusRequester() }
+                                LaunchedEffect(showAudioDialog) {
+                                    firstItemFocusRequester.requestFocus()
+                                }
+                                
+                                availableTracks.forEachIndexed { index, track ->
+                                    var isItemFocused by remember { mutableStateOf(false) }
+                                    val itemModifier = if (index == 0) {
+                                        Modifier.focusRequester(firstItemFocusRequester)
+                                    } else {
+                                        Modifier
+                                    }
+                                    Box(
+                                        modifier = itemModifier
+                                            .fillMaxWidth()
+                                            .onFocusChanged { isItemFocused = it.isFocused }
+                                            .focusable()
+                                            .clickable {
+                                                player?.let { p ->
+                                                    p.trackSelectionParameters = p.trackSelectionParameters
+                                                        .buildUpon()
+                                                        .setPreferredAudioLanguage(track.language)
+                                                        .build()
+                                                    viewModel.savePreferredLanguage(contentId, track.language ?: "und")
+                                                }
+                                                showAudioDialog = false
+                                            }
+                                            .background(
+                                                color = if (isItemFocused) Color.Yellow.copy(alpha = 0.2f) else Color.Transparent,
+                                                shape = RoundedCornerShape(6.dp)
+                                            )
+                                            .padding(vertical = 12.dp, horizontal = 12.dp)
+                                    ) {
+                                        Text(
+                                            text = track.displayName,
+                                            color = if (isItemFocused) Color.Yellow else Color.White,
+                                            fontSize = 18.sp
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            var isCloseFocused by remember { mutableStateOf(false) }
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.End)
+                                    .padding(top = 16.dp)
+                                    .onFocusChanged { isCloseFocused = it.isFocused }
+                                    .focusable()
+                                    .clickable { showAudioDialog = false }
+                                    .background(
+                                        color = if (isCloseFocused) Color.Yellow else Color.Gray.copy(alpha = 0.3f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    color = if (isCloseFocused) Color.Black else Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
-                },
-                update = { view ->
-                    if (view.player != player) {
-                        view.player = player
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+                }
+            }
         }
     }
 }
