@@ -23,11 +23,34 @@ class HimanshuMediaDrmCallback(
         uuid: UUID,
         request: androidx.media3.exoplayer.drm.ExoMediaDrm.ProvisionRequest
     ): ByteArray {
-        val url = request.defaultUrl + "&signedRequest=" + String(request.data)
-        val req = Request.Builder().url(url).build()
-        okHttpClient.newCall(req).execute().use { response ->
-            return response.body?.bytes() ?: ByteArray(0)
+        var responseBytes = ByteArray(0)
+        val signedReq = String(request.data, Charsets.UTF_8)
+        val url = request.defaultUrl + "&signedRequest=" + signedReq
+        
+        val req = Request.Builder()
+            .url(url)
+            .header("User-Agent", AppConfig.USER_AGENT)
+            .post("".toRequestBody())
+            .build()
+            
+        try {
+            android.util.Log.d("DRM_CALLBACK", "Provision Request URL: $url")
+            okHttpClient.newCall(req).execute().use { response ->
+                val code = response.code
+                android.util.Log.d("DRM_CALLBACK", "Provision Response Code: $code")
+                if (!response.isSuccessful) {
+                    val errorBody = response.peekBody(2048).string()
+                    android.util.Log.e("DRM_CALLBACK", "Provision Response Error Body: $errorBody")
+                    throw java.io.IOException("Provisioning Server returned code $code: $errorBody")
+                }
+                responseBytes = response.body?.bytes() ?: ByteArray(0)
+                android.util.Log.d("DRM_CALLBACK", "Provision Response Bytes size: ${responseBytes.size}")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("DRM_CALLBACK", "Error in executeProvisionRequest", e)
+            throw e
         }
+        return responseBytes
     }
 
     override fun executeKeyRequest(
