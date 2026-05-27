@@ -272,7 +272,9 @@ class PlayerViewModel @Inject constructor(
 
 data class AudioTrackInfo(
     val language: String?,
-    val displayName: String
+    val displayName: String,
+    val group: androidx.media3.common.Tracks.Group,
+    val trackIndex: Int
 )
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -289,7 +291,7 @@ private fun getAvailableAudioTracks(player: ExoPlayer): List<AudioTrackInfo> {
                 if (seenLanguages.add(language)) {
                     val locale = if (language == "und") java.util.Locale.getDefault() else java.util.Locale.forLanguageTag(language)
                     val displayName = if (language == "und") "Default" else locale.getDisplayName(java.util.Locale.US).replaceFirstChar { it.uppercase() }
-                    audioTracks.add(AudioTrackInfo(language, displayName))
+                    audioTracks.add(AudioTrackInfo(language, displayName, group, i))
                 }
             }
         }
@@ -306,6 +308,7 @@ fun PlayerScreen(
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     var showAudioDialog by remember { mutableStateOf(false) }
+    var isControllerVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(contentId) {
         viewModel.loadStream(contentId)
@@ -337,6 +340,9 @@ fun PlayerScreen(
                             this.player = player
                             useController = true
                             keepScreenOn = true
+                            setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
+                                isControllerVisible = (visibility == android.view.View.VISIBLE)
+                            })
                         }
                     },
                     update = { view ->
@@ -347,34 +353,35 @@ fun PlayerScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Floating Audio button (Top Right)
-                var isFocused by remember { mutableStateOf(false) }
-                val focusRequester = remember { FocusRequester() }
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(24.dp)
-                        .focusRequester(focusRequester)
-                        .onFocusChanged { isFocused = it.isFocused }
-                        .focusable()
-                        .clickable { showAudioDialog = true }
-                        .background(
-                            color = if (isFocused) Color.White else Color.Black.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(8.dp)
+                // Floating Audio button (Top Right) - Only visible when player controls are visible
+                if (isControllerVisible) {
+                    var isFocused by remember { mutableStateOf(false) }
+                    val focusRequester = remember { FocusRequester() }
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(24.dp)
+                            .onFocusChanged { isFocused = it.isFocused }
+                            .focusRequester(focusRequester)
+                            .clickable { showAudioDialog = true }
+                            .background(
+                                color = if (isFocused) Color.White else Color.Black.copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = if (isFocused) Color.Yellow else Color.Gray,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Audio",
+                            color = if (isFocused) Color.Black else Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
                         )
-                        .border(
-                            width = 2.dp,
-                            color = if (isFocused) Color.Yellow else Color.Gray,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = "Audio",
-                        color = if (isFocused) Color.Black else Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    }
                 }
 
                 if (showAudioDialog) {
@@ -426,11 +433,15 @@ fun PlayerScreen(
                                         modifier = itemModifier
                                             .fillMaxWidth()
                                             .onFocusChanged { isItemFocused = it.isFocused }
-                                            .focusable()
                                             .clickable {
                                                 player?.let { p ->
+                                                    val override = androidx.media3.common.TrackSelectionOverride(
+                                                        track.group.mediaTrackGroup,
+                                                        track.trackIndex
+                                                    )
                                                     p.trackSelectionParameters = p.trackSelectionParameters
                                                         .buildUpon()
+                                                        .setOverrideForType(override)
                                                         .setPreferredAudioLanguage(track.language)
                                                         .build()
                                                     viewModel.savePreferredLanguage(contentId, track.language ?: "und")
@@ -458,7 +469,6 @@ fun PlayerScreen(
                                     .align(Alignment.End)
                                     .padding(top = 16.dp)
                                     .onFocusChanged { isCloseFocused = it.isFocused }
-                                    .focusable()
                                     .clickable { showAudioDialog = false }
                                     .background(
                                         color = if (isCloseFocused) Color.Yellow else Color.Gray.copy(alpha = 0.3f),

@@ -1,9 +1,10 @@
 package com.himanshutv.apk.ui
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -18,6 +19,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,7 +79,25 @@ fun CategoryScreen(
     viewModel: CategoryViewModel = viewModel(),
     onChannelSelected: (Channel) -> Unit
 ) {
+    val context = LocalContext.current
+    val activity = remember(context) {
+        var ctx = context
+        while (ctx is android.content.ContextWrapper) {
+            if (ctx is Activity) {
+                break
+            }
+            ctx = ctx.baseContext
+        }
+        ctx as? Activity
+    }
+
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // Intercept back button to show Exit Confirm dialog
+    BackHandler(enabled = true) {
+        showExitDialog = true
+    }
 
     if (viewModel.isLoading) {
         Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)), contentAlignment = Alignment.Center) {
@@ -110,7 +130,6 @@ fun CategoryScreen(
                     Box(
                         modifier = Modifier
                             .onFocusChanged { isSettingsFocused = it.isFocused }
-                            .focusable()
                             .clickable { showSettingsDialog = true }
                             .background(
                                 color = if (isSettingsFocused) Color.White else Color(0xFF2C2C2C),
@@ -201,9 +220,8 @@ fun CategoryScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(toggleFocusRequester)
                             .onFocusChanged { isToggleFocused = it.isFocused }
-                            .focusable()
+                            .focusRequester(toggleFocusRequester)
                             .clickable {
                                 viewModel.setReplayLastChannel(!viewModel.replayLastChannelEnabled)
                             }
@@ -245,7 +263,6 @@ fun CategoryScreen(
                         modifier = Modifier
                             .align(Alignment.End)
                             .onFocusChanged { isCloseFocused = it.isFocused }
-                            .focusable()
                             .clickable { showSettingsDialog = false }
                             .background(
                                 color = if (isCloseFocused) Color.Yellow else Color.Gray.copy(alpha = 0.3f),
@@ -259,6 +276,89 @@ fun CategoryScreen(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
+                }
+            }
+        }
+
+        if (showExitDialog) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    .clickable { showExitDialog = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(320.dp)
+                        .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(12.dp))
+                        .border(2.dp, Color.Yellow, shape = RoundedCornerShape(12.dp))
+                        .padding(24.dp)
+                        .clickable(enabled = false) {}
+                ) {
+                    Text(
+                        text = "Exit App",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    Text(
+                        text = "Are you sure you want to close HimanshuTV?",
+                        color = Color.Gray,
+                        fontSize = 16.sp,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        var isCancelFocused by remember { mutableStateOf(false) }
+                        val cancelFocusRequester = remember { FocusRequester() }
+                        
+                        LaunchedEffect(showExitDialog) {
+                            cancelFocusRequester.requestFocus()
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .onFocusChanged { isCancelFocused = it.isFocused }
+                                .focusRequester(cancelFocusRequester)
+                                .clickable { showExitDialog = false }
+                                .background(
+                                    color = if (isCancelFocused) Color.Yellow else Color.Gray.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "Cancel",
+                                color = if (isCancelFocused) Color.Black else Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        var isExitFocused by remember { mutableStateOf(false) }
+                        Box(
+                            modifier = Modifier
+                                .onFocusChanged { isExitFocused = it.isFocused }
+                                .clickable { activity?.finish() }
+                                .background(
+                                    color = if (isExitFocused) Color.Yellow else Color.Red.copy(alpha = 0.8f),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "Exit",
+                                color = if (isExitFocused) Color.Black else Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -277,9 +377,8 @@ fun ChannelCard(
         modifier = Modifier
             .width(140.dp)
             .height(100.dp)
-            .focusRequester(focusRequester)
             .onFocusChanged { isFocused = it.isFocused }
-            .focusable()
+            .focusRequester(focusRequester)
             .clickable(onClick = onClick)
             .background(Color(0xFF2C2C2C), shape = RoundedCornerShape(8.dp))
             .border(
