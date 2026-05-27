@@ -148,15 +148,17 @@ class PlayerViewModel @Inject constructor(
         if (cookieHeader.isNotEmpty()) {
             headers["Cookie"] = cookieHeader
         }
-        if (jToken != null) {
-            headers["jToken"] = jToken
+        val jTokenVal = jToken
+        if (jTokenVal != null) {
+            headers["jToken"] = jTokenVal
             val currentCookie = headers["Cookie"] ?: ""
-            headers["Cookie"] = if (currentCookie.isNotEmpty()) "$currentCookie; jToken=$jToken" else "jToken=$jToken"
+            headers["Cookie"] = if (currentCookie.isNotEmpty()) "$currentCookie; jToken=$jTokenVal" else "jToken=$jTokenVal"
         }
-        if (lbCookie != null) {
-            headers["lbCookie"] = lbCookie
+        val lbCookieVal = lbCookie
+        if (lbCookieVal != null) {
+            headers["lbCookie"] = lbCookieVal
             val currentCookie = headers["Cookie"] ?: ""
-            headers["Cookie"] = if (currentCookie.isNotEmpty()) "$currentCookie; lbCookie=$lbCookie" else "lbCookie=$lbCookie"
+            headers["Cookie"] = if (currentCookie.isNotEmpty()) "$currentCookie; lbCookie=$lbCookieVal" else "lbCookie=$lbCookieVal"
         }
 
         val dataSourceFactory = DefaultHttpDataSource.Factory()
