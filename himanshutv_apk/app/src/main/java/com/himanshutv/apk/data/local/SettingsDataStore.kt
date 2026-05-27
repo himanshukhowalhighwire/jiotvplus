@@ -136,8 +136,8 @@ class SettingsDataStore(private val context: Context) {
             }
             file.writeText(json.toString(), Charsets.UTF_8)
             android.util.Log.d("BACKUP", "Credentials backed up to ${file.absolutePath}")
-        } catch (e: Exception) {
-            android.util.Log.e("BACKUP", "Failed to back up credentials", e)
+        } catch (t: Throwable) {
+            android.util.Log.e("BACKUP", "Failed to back up credentials", t)
         }
     }
 
@@ -174,8 +174,8 @@ class SettingsDataStore(private val context: Context) {
                     return true
                 }
             }
-        } catch (e: Exception) {
-            android.util.Log.e("BACKUP", "Failed to restore credentials", e)
+        } catch (t: Throwable) {
+            android.util.Log.e("BACKUP", "Failed to restore credentials", t)
         }
         return false
     }
