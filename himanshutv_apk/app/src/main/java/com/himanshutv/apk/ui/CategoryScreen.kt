@@ -253,7 +253,7 @@ fun CategoryScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, bottom = 16.dp)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                         .scale(settingsScale)
                         .onFocusChanged { 
                             isSettingsFocused = it.isFocused
