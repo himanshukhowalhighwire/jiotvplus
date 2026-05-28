@@ -326,9 +326,13 @@ fun PlayerScreen(
         onDispose {
             val playerToRelease = latestPlayer.value
             if (playerToRelease != null) {
+                // Pause and stop immediately on the main thread so that decoding halts instantly.
+                // This prevents graphics/MediaCodec blocking lag when detaching the Surface.
+                playerToRelease.playWhenReady = false
+                playerToRelease.stop()
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     playerToRelease.release()
-                }, 1000)
+                }, 500)
             }
         }
     }
@@ -340,7 +344,7 @@ fun PlayerScreen(
             Text(viewModel.error!!, color = Color.Red, fontSize = 24.sp)
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
-                AndroidView(
+                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
                             this.player = player
@@ -359,6 +363,9 @@ fun PlayerScreen(
                             view.player = player
                         }
                         view.requestFocus()
+                    },
+                    onRelease = { view ->
+                        view.player = null
                     },
                     modifier = Modifier.fillMaxSize()
                 )

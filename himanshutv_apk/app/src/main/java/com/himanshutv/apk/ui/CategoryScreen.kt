@@ -21,6 +21,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -143,8 +144,20 @@ fun CategoryScreen(
     var showExitDialog by remember { mutableStateOf(false) }
     var activeChannelForMenu by remember { mutableStateOf<Channel?>(null) }
 
-    // Intercept back button to show Exit Confirm dialog
-    BackHandler(enabled = true) {
+    // Intercept back button with appropriate priority levels
+    BackHandler(enabled = showExitDialog) {
+        showExitDialog = false
+    }
+
+    BackHandler(enabled = !showExitDialog && activeChannelForMenu != null) {
+        activeChannelForMenu = null
+    }
+
+    BackHandler(enabled = !showExitDialog && activeChannelForMenu == null && showSettingsDialog) {
+        showSettingsDialog = false
+    }
+
+    BackHandler(enabled = !showExitDialog && activeChannelForMenu == null && !showSettingsDialog) {
         showExitDialog = true
     }
 
@@ -156,7 +169,6 @@ fun CategoryScreen(
     }
 
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-
     // Top level focus restoration LaunchedEffect to solve race conditions during layout
     LaunchedEffect(viewModel.isLoading) {
         if (!viewModel.isLoading && viewModel.lastSelectedChannelId != null) {
@@ -248,6 +260,7 @@ fun CategoryScreen(
         }
 
         if (showSettingsDialog) {
+            var hasSettingsDownEvent by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -262,6 +275,27 @@ fun CategoryScreen(
                         .border(2.dp, Color.Yellow, shape = RoundedCornerShape(12.dp))
                         .padding(24.dp)
                         .clickable(enabled = false) {}
+                        .onPreviewKeyEvent { keyEvent ->
+                            val nativeEvent = keyEvent.nativeKeyEvent
+                            val keyCode = nativeEvent.keyCode
+                            val action = nativeEvent.action
+                            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+                                if (action == android.view.KeyEvent.ACTION_DOWN) {
+                                    hasSettingsDownEvent = true
+                                    false
+                                } else if (action == android.view.KeyEvent.ACTION_UP) {
+                                    if (!hasSettingsDownEvent) {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        }
                 ) {
                     Text(
                         text = "App Settings",
@@ -342,6 +376,7 @@ fun CategoryScreen(
         }
 
         if (showExitDialog) {
+            var hasExitDownEvent by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -356,6 +391,27 @@ fun CategoryScreen(
                         .border(2.dp, Color.Yellow, shape = RoundedCornerShape(12.dp))
                         .padding(24.dp)
                         .clickable(enabled = false) {}
+                        .onPreviewKeyEvent { keyEvent ->
+                            val nativeEvent = keyEvent.nativeKeyEvent
+                            val keyCode = nativeEvent.keyCode
+                            val action = nativeEvent.action
+                            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+                                if (action == android.view.KeyEvent.ACTION_DOWN) {
+                                    hasExitDownEvent = true
+                                    false
+                                } else if (action == android.view.KeyEvent.ACTION_UP) {
+                                    if (!hasExitDownEvent) {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        }
                 ) {
                     Text(
                         text = "Exit App",
@@ -427,6 +483,7 @@ fun CategoryScreen(
         if (activeChannelForMenu != null) {
             val channel = activeChannelForMenu!!
             val isFav = channel.getResolvedId() in viewModel.favoriteChannelIds
+            var hasFavDownEvent by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -441,6 +498,27 @@ fun CategoryScreen(
                         .border(2.dp, Color.Yellow, shape = RoundedCornerShape(12.dp))
                         .padding(24.dp)
                         .clickable(enabled = false) {}
+                        .onPreviewKeyEvent { keyEvent ->
+                            val nativeEvent = keyEvent.nativeKeyEvent
+                            val keyCode = nativeEvent.keyCode
+                            val action = nativeEvent.action
+                            if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+                                if (action == android.view.KeyEvent.ACTION_DOWN) {
+                                    hasFavDownEvent = true
+                                    false
+                                } else if (action == android.view.KeyEvent.ACTION_UP) {
+                                    if (!hasFavDownEvent) {
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            } else {
+                                false
+                            }
+                        }
                 ) {
                     Text(
                         text = channel.getResolvedName(),
@@ -528,6 +606,10 @@ fun ChannelCard(
             .height(100.dp)
             .onFocusChanged { isFocused = it.isFocused }
             .focusRequester(focusRequester)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .onKeyEvent { keyEvent ->
                 val nativeEvent = keyEvent.nativeKeyEvent
                 val keyCode = nativeEvent.keyCode
@@ -558,10 +640,6 @@ fun ChannelCard(
                     false
                 }
             }
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
             .background(Color(0xFF2C2C2C), shape = RoundedCornerShape(8.dp))
             .border(
                 width = 2.dp,
