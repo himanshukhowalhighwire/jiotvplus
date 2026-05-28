@@ -1,6 +1,8 @@
 package com.himanshutv.apk.ui
 
 import android.content.Context
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -307,8 +309,11 @@ fun PlayerScreen(
 ) {
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
     var showAudioDialog by remember { mutableStateOf(false) }
     var isControllerVisible by remember { mutableStateOf(false) }
+    var handleBack by remember { mutableStateOf(true) }
+    val onBackPressedDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     LaunchedEffect(contentId) {
         viewModel.loadStream(contentId)
@@ -326,15 +331,39 @@ fun PlayerScreen(
         onDispose {
             val playerToRelease = latestPlayer.value
             if (playerToRelease != null) {
-                // Pause and stop immediately on the main thread so that decoding halts instantly.
-                // This prevents graphics/MediaCodec blocking lag when detaching the Surface.
                 playerToRelease.playWhenReady = false
                 playerToRelease.stop()
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     playerToRelease.release()
-                }, 500)
+                }, 100)
             }
         }
+    }
+
+    BackHandler(enabled = showAudioDialog) {
+        showAudioDialog = false
+    }
+
+    BackHandler(enabled = !showAudioDialog && isControllerVisible) {
+        playerViewRef?.hideController()
+    }
+
+    BackHandler(enabled = handleBack && !showAudioDialog && !isControllerVisible) {
+        val playerToRelease = player
+        player = null // state change to update AndroidView immediately
+        
+        if (playerToRelease != null) {
+            playerToRelease.playWhenReady = false
+            playerToRelease.stop()
+            playerToRelease.clearMediaItems()
+            
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                playerToRelease.release()
+            }, 100)
+        }
+        
+        handleBack = false
+        onBackPressedDispatcher?.onBackPressed()
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
@@ -355,6 +384,7 @@ fun PlayerScreen(
                             setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
                                 isControllerVisible = (visibility == android.view.View.VISIBLE)
                             })
+                            playerViewRef = this
                             requestFocus()
                         }
                     },

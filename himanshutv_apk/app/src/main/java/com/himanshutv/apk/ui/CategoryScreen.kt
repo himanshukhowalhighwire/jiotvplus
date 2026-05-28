@@ -542,9 +542,11 @@ fun CategoryScreen(
                             .fillMaxWidth()
                             .onFocusChanged { isFavOptionFocused = it.isFocused }
                             .focusRequester(favOptionFocusRequester)
-                            .clickable(enabled = isClickable) {
-                                viewModel.toggleFavorite(channel.getResolvedId())
-                                activeChannelForMenu = null
+                            .clickable {
+                                if (isClickable) {
+                                    viewModel.toggleFavorite(channel.getResolvedId())
+                                    activeChannelForMenu = null
+                                }
                             }
                             .background(
                                 color = if (isFavOptionFocused) Color.Yellow else Color.Gray.copy(alpha = 0.1f),
@@ -567,7 +569,7 @@ fun CategoryScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged { isCancelOptionFocused = it.isFocused }
-                            .clickable(enabled = isClickable) { activeChannelForMenu = null }
+                            .clickable { if (isClickable) activeChannelForMenu = null }
                             .background(
                                 color = if (isCancelOptionFocused) Color.Yellow else Color.Gray.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(8.dp)
