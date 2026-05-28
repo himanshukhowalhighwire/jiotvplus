@@ -321,9 +321,15 @@ fun PlayerScreen(
         }
     }
 
+    val latestPlayer = rememberUpdatedState(player)
     DisposableEffect(Unit) {
         onDispose {
-            player?.release()
+            val playerToRelease = latestPlayer.value
+            if (playerToRelease != null) {
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    playerToRelease.release()
+                }, 1000)
+            }
         }
     }
 
