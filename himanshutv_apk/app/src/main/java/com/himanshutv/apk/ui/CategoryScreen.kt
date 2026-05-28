@@ -55,6 +55,7 @@ class CategoryViewModel @Inject constructor(
     var lastSelectedChannelId by mutableStateOf<String?>(null)
     var selectedCategory by mutableStateOf<String?>(null)
     var replayLastChannelEnabled by mutableStateOf(false)
+    var autoStartOnBootEnabled by mutableStateOf(false)
     var favoriteChannelIds by mutableStateOf<Set<String>>(emptySet())
     private var allChannelsList = emptyList<Channel>()
 
@@ -76,6 +77,11 @@ class CategoryViewModel @Inject constructor(
         viewModelScope.launch {
             dataStore.replayLastChannel.collect { enabled ->
                 replayLastChannelEnabled = enabled
+            }
+        }
+        viewModelScope.launch {
+            dataStore.autoStartOnBoot.collect { enabled ->
+                autoStartOnBootEnabled = enabled
             }
         }
         viewModelScope.launch {
@@ -116,6 +122,12 @@ class CategoryViewModel @Inject constructor(
     fun setReplayLastChannel(enabled: Boolean) {
         viewModelScope.launch {
             dataStore.setReplayLastChannel(enabled)
+        }
+    }
+
+    fun setAutoStartOnBoot(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStore.setAutoStartOnBoot(enabled)
         }
     }
 
@@ -231,8 +243,49 @@ fun CategoryScreen(
                     fontSize = 28.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp)
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
                 )
+
+                // Settings Button at the top of the left pane
+                var isSettingsFocused by remember { mutableStateOf(false) }
+                val settingsScale by animateFloatAsState(if (isSettingsFocused) 1.05f else 1f)
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, bottom = 16.dp)
+                        .scale(settingsScale)
+                        .onFocusChanged { 
+                            isSettingsFocused = it.isFocused
+                            if (it.isFocused) isCategoryListFocused = true
+                        }
+                        .focusRequester(settingsFocusRequester)
+                        .clickable { showSettingsDialog = true }
+                        .background(
+                            color = if (isSettingsFocused) Color(0xFF334155) else Color.Transparent,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = if (isSettingsFocused) Color(0xFF94A3B8) else Color.Transparent,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "⚙️",
+                            fontSize = 20.sp,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Text(
+                            text = "Settings",
+                            color = if (isSettingsFocused) Color.White else Color.Gray,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -273,40 +326,6 @@ fun CategoryScreen(
                             )
                         }
                     }
-                }
-                
-                // Settings Button at the bottom of the left pane
-                var isSettingsFocused by remember { mutableStateOf(false) }
-                val settingsScale by animateFloatAsState(if (isSettingsFocused) 1.05f else 1f)
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .scale(settingsScale)
-                        .onFocusChanged { 
-                            isSettingsFocused = it.isFocused
-                            if (it.isFocused) isCategoryListFocused = true
-                        }
-                        .focusRequester(settingsFocusRequester)
-                        .clickable { showSettingsDialog = true }
-                        .background(
-                            color = if (isSettingsFocused) Color(0xFF334155) else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            width = 2.dp,
-                            color = if (isSettingsFocused) Color(0xFF94A3B8) else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 16.dp, vertical = 14.dp)
-                ) {
-                    Text(
-                        text = "Settings",
-                        color = if (isSettingsFocused) Color.White else Color.Gray,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
 
@@ -545,6 +564,51 @@ fun SettingsDialog(
                 Text(
                     text = if (viewModel.replayLastChannelEnabled) "ON" else "OFF",
                     color = if (viewModel.replayLastChannelEnabled) Color(0xFF34D399) else Color(0xFFF87171),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            var isAutoStartFocused by remember { mutableStateOf(false) }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { isAutoStartFocused = it.isFocused }
+                    .clickable { viewModel.setAutoStartOnBoot(!viewModel.autoStartOnBootEnabled) }
+                    .background(
+                        color = if (isAutoStartFocused) Color(0xFF3B82F6).copy(alpha = 0.3f) else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = if (isAutoStartFocused) Color(0xFF3B82F6) else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Launch on TV Startup",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Automatically open HimanshuTV when your TV turns on",
+                        color = Color(0xFF94A3B8),
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                
+                Text(
+                    text = if (viewModel.autoStartOnBootEnabled) "ON" else "OFF",
+                    color = if (viewModel.autoStartOnBootEnabled) Color(0xFF34D399) else Color(0xFFF87171),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )

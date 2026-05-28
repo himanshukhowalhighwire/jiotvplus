@@ -23,6 +23,7 @@ class SettingsDataStore(private val context: Context) {
         val REFRESH_TOKEN = stringPreferencesKey("refresh_token")
         
         val REPLAY_LAST_CHANNEL = booleanPreferencesKey("replay_last_channel")
+        val AUTO_START_ON_BOOT = booleanPreferencesKey("auto_start_on_boot")
         val LAST_PLAYED_CHANNEL_ID = stringPreferencesKey("last_played_channel_id")
         val FAVORITE_CHANNELS = stringPreferencesKey("favorite_channels")
     }
@@ -36,6 +37,7 @@ class SettingsDataStore(private val context: Context) {
     val accessToken: Flow<String?> = context.dataStore.data.map { it[ACCESS_TOKEN] }
 
     val replayLastChannel: Flow<Boolean> = context.dataStore.data.map { it[REPLAY_LAST_CHANNEL] ?: false }
+    val autoStartOnBoot: Flow<Boolean> = context.dataStore.data.map { it[AUTO_START_ON_BOOT] ?: false }
     val lastPlayedChannelId: Flow<String?> = context.dataStore.data.map { it[LAST_PLAYED_CHANNEL_ID] }
 
     val favoriteChannels: Flow<Set<String>> = context.dataStore.data.map { prefs ->
@@ -97,6 +99,12 @@ class SettingsDataStore(private val context: Context) {
     suspend fun setReplayLastChannel(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[REPLAY_LAST_CHANNEL] = enabled
+        }
+    }
+
+    suspend fun setAutoStartOnBoot(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[AUTO_START_ON_BOOT] = enabled
         }
     }
 
