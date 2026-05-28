@@ -147,7 +147,8 @@ class MainActivity : ComponentActivity() {
                             val viewModel: PlayerViewModel = hiltViewModel()
                             PlayerScreen(
                                 contentId = contentId,
-                                viewModel = viewModel
+                                viewModel = viewModel,
+                                onNavigateUp = { navController.popBackStack() }
                             )
                         }
                     }

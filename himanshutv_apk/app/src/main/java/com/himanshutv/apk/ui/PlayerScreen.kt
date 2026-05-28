@@ -305,22 +305,15 @@ private fun getAvailableAudioTracks(player: ExoPlayer): List<AudioTrackInfo> {
 @Composable
 fun PlayerScreen(
     contentId: String,
-    viewModel: PlayerViewModel = viewModel()
+    viewModel: PlayerViewModel = viewModel(),
+    onNavigateUp: () -> Unit
 ) {
     val context = LocalContext.current
     var player by remember { mutableStateOf<ExoPlayer?>(null) }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
     var showAudioDialog by remember { mutableStateOf(false) }
     var isControllerVisible by remember { mutableStateOf(false) }
-    var handleBack by remember { mutableStateOf(true) }
-    var triggerBack by remember { mutableStateOf(false) }
-    val onBackPressedDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-
-    LaunchedEffect(triggerBack) {
-        if (triggerBack) {
-            onBackPressedDispatcher?.onBackPressed()
-        }
-    }
+    var isNavigatingBack by remember { mutableStateOf(false) }
 
     LaunchedEffect(contentId) {
         viewModel.loadStream(contentId)
@@ -355,22 +348,17 @@ fun PlayerScreen(
         playerViewRef?.hideController()
     }
 
-    BackHandler(enabled = handleBack && !showAudioDialog && !isControllerVisible) {
+    BackHandler(enabled = !isNavigatingBack && !showAudioDialog && !isControllerVisible) {
+        isNavigatingBack = true
         val playerToRelease = player
-        player = null // state change to update AndroidView immediately
         
         if (playerToRelease != null) {
             playerToRelease.playWhenReady = false
             playerToRelease.stop()
             playerToRelease.clearMediaItems()
-            
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                playerToRelease.release()
-            }, 100)
         }
         
-        handleBack = false
-        triggerBack = true
+        onNavigateUp()
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
