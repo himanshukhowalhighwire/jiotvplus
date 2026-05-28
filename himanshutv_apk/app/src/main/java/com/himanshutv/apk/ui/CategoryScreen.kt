@@ -329,7 +329,7 @@ fun CategoryScreen(
                     columns = GridCells.Adaptive(minSize = 160.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp),
+                    contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 24.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(channelsInCurrentCategory) { channel ->
