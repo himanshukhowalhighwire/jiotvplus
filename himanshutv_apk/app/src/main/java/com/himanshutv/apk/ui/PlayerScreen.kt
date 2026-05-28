@@ -313,7 +313,14 @@ fun PlayerScreen(
     var showAudioDialog by remember { mutableStateOf(false) }
     var isControllerVisible by remember { mutableStateOf(false) }
     var handleBack by remember { mutableStateOf(true) }
+    var triggerBack by remember { mutableStateOf(false) }
     val onBackPressedDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
+    LaunchedEffect(triggerBack) {
+        if (triggerBack) {
+            onBackPressedDispatcher?.onBackPressed()
+        }
+    }
 
     LaunchedEffect(contentId) {
         viewModel.loadStream(contentId)
@@ -363,7 +370,7 @@ fun PlayerScreen(
         }
         
         handleBack = false
-        onBackPressedDispatcher?.onBackPressed()
+        triggerBack = true
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
