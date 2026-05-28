@@ -24,6 +24,7 @@ class SettingsDataStore(private val context: Context) {
         
         val REPLAY_LAST_CHANNEL = booleanPreferencesKey("replay_last_channel")
         val LAST_PLAYED_CHANNEL_ID = stringPreferencesKey("last_played_channel_id")
+        val FAVORITE_CHANNELS = stringPreferencesKey("favorite_channels")
     }
 
     val mobileNumber: Flow<String?> = context.dataStore.data.map { it[MOBILE_NUMBER] }
@@ -36,6 +37,29 @@ class SettingsDataStore(private val context: Context) {
 
     val replayLastChannel: Flow<Boolean> = context.dataStore.data.map { it[REPLAY_LAST_CHANNEL] ?: false }
     val lastPlayedChannelId: Flow<String?> = context.dataStore.data.map { it[LAST_PLAYED_CHANNEL_ID] }
+
+    val favoriteChannels: Flow<Set<String>> = context.dataStore.data.map { prefs ->
+        val favsStr = prefs[FAVORITE_CHANNELS] ?: ""
+        if (favsStr.isEmpty()) emptySet() else favsStr.split(",").toSet()
+    }
+
+    suspend fun addFavorite(channelId: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[FAVORITE_CHANNELS] ?: ""
+            val set = if (current.isEmpty()) mutableSetOf() else current.split(",").toMutableSet()
+            set.add(channelId)
+            prefs[FAVORITE_CHANNELS] = set.joinToString(",")
+        }
+    }
+
+    suspend fun removeFavorite(channelId: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[FAVORITE_CHANNELS] ?: ""
+            val set = if (current.isEmpty()) mutableSetOf() else current.split(",").toMutableSet()
+            set.remove(channelId)
+            prefs[FAVORITE_CHANNELS] = set.joinToString(",")
+        }
+    }
 
     suspend fun saveAuthData(
         mobile: String,
@@ -141,7 +165,7 @@ class SettingsDataStore(private val context: Context) {
         }
     }
 
-    fun tryRestoreCredentials(): Boolean {
+    suspend fun tryRestoreCredentials(): Boolean {
         try {
             val file = getBackupFile()
             if (file.exists()) {
@@ -157,18 +181,16 @@ class SettingsDataStore(private val context: Context) {
                 val refresh = json.optString("refreshToken").takeIf { it.isNotEmpty() }
 
                 if (mobile.isNotEmpty()) {
-                    runBlocking {
-                        // Temporarily bypass backup write during restore to avoid loop
-                        context.dataStore.edit { prefs ->
-                            prefs[MOBILE_NUMBER] = mobile
-                            sso?.let { prefs[SSO_TOKEN] = it }
-                            jTokenVal?.let { prefs[J_TOKEN] = it }
-                            lbCookieVal?.let { prefs[LB_COOKIE] = it }
-                            subId?.let { prefs[SUBSCRIBER_ID] = it }
-                            unique?.let { prefs[UNIQUE_ID] = it }
-                            access?.let { prefs[ACCESS_TOKEN] = it }
-                            refresh?.let { prefs[REFRESH_TOKEN] = it }
-                        }
+                    // Temporarily bypass backup write during restore to avoid loop
+                    context.dataStore.edit { prefs ->
+                        prefs[MOBILE_NUMBER] = mobile
+                        sso?.let { prefs[SSO_TOKEN] = it }
+                        jTokenVal?.let { prefs[J_TOKEN] = it }
+                        lbCookieVal?.let { prefs[LB_COOKIE] = it }
+                        subId?.let { prefs[SUBSCRIBER_ID] = it }
+                        unique?.let { prefs[UNIQUE_ID] = it }
+                        access?.let { prefs[ACCESS_TOKEN] = it }
+                        refresh?.let { prefs[REFRESH_TOKEN] = it }
                     }
                     android.util.Log.d("BACKUP", "Credentials successfully restored from ${file.absolutePath}")
                     return true
