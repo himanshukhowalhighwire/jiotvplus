@@ -231,7 +231,7 @@ fun CategoryScreen(
                     fontSize = 28.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
-                    modifier = Modifier.padding(horizontal = 24.dp, bottom = 32.dp)
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 32.dp)
                 )
 
                 LazyColumn(
