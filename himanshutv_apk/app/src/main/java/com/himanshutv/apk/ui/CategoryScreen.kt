@@ -2,9 +2,11 @@ package com.himanshutv.apk.ui
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -32,6 +34,7 @@ import com.himanshutv.apk.data.local.SettingsDataStore
 import com.himanshutv.apk.data.model.Channel
 import com.himanshutv.apk.data.repository.ChannelRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -44,6 +47,8 @@ class CategoryViewModel @Inject constructor(
     var isLoading by mutableStateOf(true)
     var lastSelectedChannelId by mutableStateOf<String?>(null)
     var replayLastChannelEnabled by mutableStateOf(false)
+    var favoriteChannelIds by mutableStateOf<Set<String>>(emptySet())
+    private var allChannelsList = emptyList<Channel>()
 
     init {
         loadChannels()
@@ -53,8 +58,8 @@ class CategoryViewModel @Inject constructor(
     private fun loadChannels() {
         viewModelScope.launch {
             isLoading = true
-            val allChannels = channelRepository.getChannels()
-            channelsByCategory = allChannels.groupBy { it.getResolvedCategory() }
+            allChannelsList = channelRepository.getChannels()
+            updateGroupedChannels()
             isLoading = false
         }
     }
@@ -72,6 +77,30 @@ class CategoryViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            dataStore.favoriteChannels.collect { favs ->
+                favoriteChannelIds = favs
+                updateGroupedChannels()
+            }
+        }
+    }
+
+    private fun updateGroupedChannels() {
+        val grouped = mutableMapOf<String, List<Channel>>()
+        
+        // Add Favorites at the top if there are any
+        if (favoriteChannelIds.isNotEmpty() && allChannelsList.isNotEmpty()) {
+            val favChannels = allChannelsList.filter { it.getResolvedId() in favoriteChannelIds }
+            if (favChannels.isNotEmpty()) {
+                grouped["Favorites"] = favChannels
+            }
+        }
+        
+        // Group remaining channels by category
+        val restGrouped = allChannelsList.groupBy { it.getResolvedCategory() }
+        grouped.putAll(restGrouped)
+        
+        channelsByCategory = grouped
     }
 
     fun setReplayLastChannel(enabled: Boolean) {
@@ -79,8 +108,19 @@ class CategoryViewModel @Inject constructor(
             dataStore.setReplayLastChannel(enabled)
         }
     }
+
+    fun toggleFavorite(channelId: String) {
+        viewModelScope.launch {
+            if (channelId in favoriteChannelIds) {
+                dataStore.removeFavorite(channelId)
+            } else {
+                dataStore.addFavorite(channelId)
+            }
+        }
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CategoryScreen(
     viewModel: CategoryViewModel = viewModel(),
@@ -100,6 +140,7 @@ fun CategoryScreen(
 
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var activeChannelForMenu by remember { mutableStateOf<Channel?>(null) }
 
     // Intercept back button to show Exit Confirm dialog
     BackHandler(enabled = true) {
@@ -114,6 +155,14 @@ fun CategoryScreen(
     }
 
     val focusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+
+    // Top level focus restoration LaunchedEffect to solve race conditions during layout
+    LaunchedEffect(viewModel.isLoading) {
+        if (!viewModel.isLoading && viewModel.lastSelectedChannelId != null) {
+            delay(150)
+            focusRequesters[viewModel.lastSelectedChannelId]?.requestFocus()
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -180,6 +229,9 @@ fun CategoryScreen(
                                 onClick = {
                                     viewModel.lastSelectedChannelId = channel.getResolvedId()
                                     onChannelSelected(channel)
+                                },
+                                onLongClick = {
+                                    activeChannelForMenu = channel
                                 }
                             )
 
@@ -370,14 +422,96 @@ fun CategoryScreen(
                 }
             }
         }
+
+        if (activeChannelForMenu != null) {
+            val channel = activeChannelForMenu!!
+            val isFav = channel.getResolvedId() in viewModel.favoriteChannelIds
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    .clickable { activeChannelForMenu = null },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(320.dp)
+                        .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(12.dp))
+                        .border(2.dp, Color.Yellow, shape = RoundedCornerShape(12.dp))
+                        .padding(24.dp)
+                        .clickable(enabled = false) {}
+                ) {
+                    Text(
+                        text = channel.getResolvedName(),
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
+
+                    var isFavOptionFocused by remember { mutableStateOf(false) }
+                    val favOptionFocusRequester = remember { FocusRequester() }
+                    LaunchedEffect(activeChannelForMenu) {
+                        favOptionFocusRequester.requestFocus()
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { isFavOptionFocused = it.isFocused }
+                            .focusRequester(favOptionFocusRequester)
+                            .clickable {
+                                viewModel.toggleFavorite(channel.getResolvedId())
+                                activeChannelForMenu = null
+                            }
+                            .background(
+                                color = if (isFavOptionFocused) Color.Yellow else Color.Gray.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = if (isFav) "Remove from Favorites" else "Add to Favorites",
+                            color = if (isFavOptionFocused) Color.Black else Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    var isCancelOptionFocused by remember { mutableStateOf(false) }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { isCancelOptionFocused = it.isFocused }
+                            .clickable { activeChannelForMenu = null }
+                            .background(
+                                color = if (isCancelOptionFocused) Color.Yellow else Color.Gray.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = if (isCancelOptionFocused) Color.Black else Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChannelCard(
     channel: Channel,
     focusRequester: FocusRequester,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     var isFocused by remember { mutableStateOf(false) }
     Box(
@@ -386,7 +520,10 @@ fun ChannelCard(
             .height(100.dp)
             .onFocusChanged { isFocused = it.isFocused }
             .focusRequester(focusRequester)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .background(Color(0xFF2C2C2C), shape = RoundedCornerShape(8.dp))
             .border(
                 width = 2.dp,

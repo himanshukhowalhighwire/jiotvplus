@@ -323,7 +323,13 @@ fun PlayerScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            player?.release()
+            val playerToRelease = player
+            player = null
+            if (playerToRelease != null) {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    playerToRelease.release()
+                }
+            }
         }
     }
 
