@@ -45,6 +45,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+fun FocusRequester.safeRequestFocus() {
+    try {
+        this.requestFocus()
+    } catch (e: Exception) {
+        // Ignore exception if the node is not yet attached
+    }
+}
+
 @HiltViewModel
 class CategoryViewModel @Inject constructor(
     private val channelRepository: ChannelRepository,
@@ -210,17 +218,17 @@ fun CategoryScreen(
             if (lastCategory != null) {
                 viewModel.selectedCategory = lastCategory
                 delay(200)
-                channelFocusRequesters[viewModel.lastSelectedChannelId]?.requestFocus()
+                channelFocusRequesters[viewModel.lastSelectedChannelId]?.safeRequestFocus()
             }
         } else if (!viewModel.isLoading) {
             delay(150)
-            categoryFocusRequesters[currentCategory]?.requestFocus()
+            categoryFocusRequesters[currentCategory]?.safeRequestFocus()
         }
     }
 
     LaunchedEffect(isCategoryListFocused) {
         if (isCategoryListFocused) {
-            categoryFocusRequesters[currentCategory]?.requestFocus()
+            categoryFocusRequesters[currentCategory]?.safeRequestFocus()
         }
     }
 
@@ -525,7 +533,7 @@ fun SettingsDialog(
 
             var isToggleFocused by remember { mutableStateOf(false) }
             val toggleFocusRequester = remember { FocusRequester() }
-            LaunchedEffect(Unit) { toggleFocusRequester.requestFocus() }
+            LaunchedEffect(Unit) { toggleFocusRequester.safeRequestFocus() }
 
             Row(
                 modifier = Modifier
@@ -693,7 +701,7 @@ fun ExitDialog(
                 var isCancelFocused by remember { mutableStateOf(false) }
                 val cancelFocusRequester = remember { FocusRequester() }
                 
-                LaunchedEffect(Unit) { cancelFocusRequester.requestFocus() }
+                LaunchedEffect(Unit) { cancelFocusRequester.safeRequestFocus() }
                 
                 Box(
                     modifier = Modifier
@@ -785,7 +793,7 @@ fun FavoriteDialog(
             val favOptionFocusRequester = remember { FocusRequester() }
             
             LaunchedEffect(Unit) {
-                favOptionFocusRequester.requestFocus()
+                favOptionFocusRequester.safeRequestFocus()
                 delay(300)
                 isClickable = true
             }

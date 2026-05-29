@@ -54,6 +54,12 @@ import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
 
+fun FocusRequester.safeRequestFocus() {
+    try {
+        this.requestFocus()
+    } catch (e: Exception) {}
+}
+
 @HiltViewModel
 @UnstableApi
 class PlayerViewModel @Inject constructor(
@@ -461,7 +467,7 @@ fun PlayerScreen(
                             } else {
                                 val firstItemFocusRequester = remember { FocusRequester() }
                                 LaunchedEffect(showAudioDialog) {
-                                    firstItemFocusRequester.requestFocus()
+                                    firstItemFocusRequester.safeRequestFocus()
                                 }
                                 
                                 availableTracks.forEachIndexed { index, track ->
