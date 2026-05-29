@@ -54,7 +54,7 @@ import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
 
-fun FocusRequester.safeRequestFocus() {
+private fun FocusRequester.safeRequestFocus() {
     try {
         this.requestFocus()
     } catch (e: Exception) {}

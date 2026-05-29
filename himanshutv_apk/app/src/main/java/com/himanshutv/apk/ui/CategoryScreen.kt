@@ -45,7 +45,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-fun FocusRequester.safeRequestFocus() {
+private fun FocusRequester.safeRequestFocus() {
     try {
         this.requestFocus()
     } catch (e: Exception) {
