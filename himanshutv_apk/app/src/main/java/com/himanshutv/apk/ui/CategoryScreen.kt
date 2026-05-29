@@ -44,6 +44,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.hilt.navigation.compose.hiltViewModel
 
 private fun FocusRequester.safeRequestFocus() {
     try {
