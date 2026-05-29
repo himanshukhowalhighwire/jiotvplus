@@ -153,23 +153,33 @@ class CategoryViewModel @Inject constructor(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CategoryScreen(
-    viewModel: CategoryViewModel = viewModel(),
-    onChannelSelected: (Channel) -> Unit
+    autoReplayId: String? = null,
+    onReplayHandled: () -> Unit = {},
+    onChannelSelected: (Channel) -> Unit,
+    onNavigateToPlayer: (String) -> Unit = {},
+    viewModel: CategoryViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val activity = remember(context) {
         var ctx = context
         while (ctx is android.content.ContextWrapper) {
-            if (ctx is Activity) break
+            if (ctx is android.app.Activity) break
             ctx = ctx.baseContext
         }
-        ctx as? Activity
+        ctx as? android.app.Activity
     }
-
-    var showSettingsDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
-    var activeChannelForMenu by remember { mutableStateOf<Channel?>(null) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     var isCategoryListFocused by remember { mutableStateOf(true) }
+    var activeChannelForMenu by remember { mutableStateOf<Channel?>(null) }
+
+    LaunchedEffect(autoReplayId) {
+        if (autoReplayId != null) {
+            onReplayHandled()
+            delay(150)
+            onNavigateToPlayer(autoReplayId)
+        }
+    }
 
     BackHandler(enabled = showExitDialog) {
         showExitDialog = false

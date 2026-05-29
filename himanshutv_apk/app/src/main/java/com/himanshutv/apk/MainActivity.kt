@@ -102,15 +102,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    LaunchedEffect(startDestination) {
-                        if (startDestination == "home" && autoReplayId != null) {
-                            val id = autoReplayId
-                            autoReplayId = null
-                            kotlinx.coroutines.delay(150)
-                            navController.navigate("player/$id")
-                        }
-                    }
-
                     if (startDestination == null) {
                         Box(modifier = Modifier.fillMaxSize().background(Color.Black))
                         return@Surface
@@ -129,14 +120,14 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("home") {
-                            val viewModel: CategoryViewModel = hiltViewModel()
                             CategoryScreen(
-                                viewModel = viewModel,
+                                autoReplayId = autoReplayId,
+                                onReplayHandled = { autoReplayId = null },
                                 onChannelSelected = { channel ->
-                                    val id = channel.getResolvedId()
-                                    if (id.isNotEmpty()) {
-                                        navController.navigate("player/$id")
-                                    }
+                                    navController.navigate("player/${channel.getResolvedId()}")
+                                },
+                                onNavigateToPlayer = { id ->
+                                    navController.navigate("player/$id")
                                 }
                             )
                         }
