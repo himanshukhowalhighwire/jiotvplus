@@ -194,14 +194,7 @@ fun CategoryScreen(
         showSettingsDialog = false
     }
 
-    // When focused on channel grid, pressing back should return focus to the category list
-    BackHandler(enabled = !showExitDialog && activeChannelForMenu == null && !showSettingsDialog && !isCategoryListFocused) {
-        isCategoryListFocused = true
-    }
 
-    BackHandler(enabled = !showExitDialog && activeChannelForMenu == null && !showSettingsDialog && isCategoryListFocused) {
-        showExitDialog = true
-    }
 
     if (viewModel.isLoading) {
         Box(
@@ -250,105 +243,131 @@ fun CategoryScreen(
         }
     }
 
+    var isCategorySelected by remember { mutableStateOf(false) }
+    val categoryWeight by animateFloatAsState(targetValue = if (isCategorySelected) 0.28f else 1f)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF0F172A), Color(0xFF020617))))
+            .background(Brush.radialGradient(
+                colors = listOf(Color(0xFF0F172A), Color(0xFF020617)),
+                radius = 1200f
+            ))
     ) {
         Row(modifier = Modifier.fillMaxSize()) {
             // LEFT PANE - Categories
             Column(
                 modifier = Modifier
-                    .weight(0.25f)
+                    .weight(categoryWeight)
                     .fillMaxHeight()
-                    .background(Color.Black.copy(alpha = 0.3f))
-                    .padding(vertical = 24.dp)
+                    .background(Brush.horizontalGradient(
+                        colors = listOf(Color(0xFF000000).copy(alpha = 0.5f), Color.Transparent)
+                    ))
+                    .padding(vertical = 32.dp),
+                horizontalAlignment = if (isCategorySelected) Alignment.Start else Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "HimanshuTV",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    text = "HIMANSHU TV",
+                    fontSize = if (isCategorySelected) 24.sp else 36.sp,
+                    fontWeight = FontWeight.Black,
                     color = Color.White,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
+                    letterSpacing = 2.sp,
+                    modifier = Modifier.padding(
+                        start = if (isCategorySelected) 24.dp else 0.dp,
+                        bottom = 32.dp
+                    )
                 )
 
-                // Settings Button at the top of the left pane
                 var isSettingsFocused by remember { mutableStateOf(false) }
                 val settingsScale by animateFloatAsState(if (isSettingsFocused) 1.05f else 1f)
                 
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .fillMaxWidth(if (isCategorySelected) 1f else 0.4f)
+                        .padding(
+                            start = if (isCategorySelected) 16.dp else 0.dp, 
+                            end = if (isCategorySelected) 16.dp else 0.dp, 
+                            bottom = 16.dp
+                        )
                         .scale(settingsScale)
                         .onFocusChanged { 
                             isSettingsFocused = it.isFocused
-                            if (it.isFocused) isCategoryListFocused = true
+                            if (it.isFocused) {
+                                isCategoryListFocused = true
+                                isCategorySelected = false
+                            }
                         }
                         .focusRequester(settingsFocusRequester)
                         .clickable { showSettingsDialog = true }
                         .background(
-                            color = if (isSettingsFocused) Color(0xFF334155) else Color.Transparent,
+                            color = if (isSettingsFocused) Color(0xFF1E293B) else Color(0xFF0F172A).copy(alpha = 0.5f),
                             shape = RoundedCornerShape(12.dp)
                         )
                         .border(
                             width = 2.dp,
-                            color = if (isSettingsFocused) Color(0xFF94A3B8) else Color.Transparent,
+                            color = if (isSettingsFocused) Color(0xFF38BDF8) else Color.Transparent,
                             shape = RoundedCornerShape(12.dp)
                         )
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "⚙️",
-                            fontSize = 20.sp,
-                            modifier = Modifier.padding(end = 12.dp)
-                        )
-                        Text(
-                            text = "Settings",
-                            color = if (isSettingsFocused) Color.White else Color.Gray,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    Text(
+                        text = "⚙ Settings", 
+                        color = if (isSettingsFocused) Color.White else Color(0xFF94A3B8), 
+                        fontSize = 16.sp, 
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(if (isCategorySelected) 1f else 0.4f),
+                    contentPadding = PaddingValues(
+                        start = if (isCategorySelected) 16.dp else 0.dp, 
+                        end = if (isCategorySelected) 16.dp else 0.dp, 
+                        bottom = 24.dp
+                    )
                 ) {
                     items(categories) { category ->
+                        val isSelected = category == currentCategory
                         var isFocused by remember { mutableStateOf(false) }
-                        val isSelected = currentCategory == category
+                        val scale by animateFloatAsState(if (isFocused) 1.08f else 1f)
                         
-                        val scale by animateFloatAsState(if (isFocused) 1.05f else 1f)
-                        val alpha by animateFloatAsState(if (isFocused || isSelected) 1f else 0.6f)
-
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .padding(vertical = 6.dp)
                                 .scale(scale)
-                                .onFocusChanged { 
+                                .onFocusChanged {
                                     isFocused = it.isFocused
                                     if (it.isFocused) {
                                         isCategoryListFocused = true
+                                        isCategorySelected = false
                                         viewModel.selectedCategory = category
                                     }
                                 }
                                 .focusRequester(categoryFocusRequesters.getOrPut(category) { FocusRequester() })
-                                .clickable { viewModel.selectedCategory = category }
+                                .clickable { 
+                                    viewModel.selectedCategory = category
+                                    isCategorySelected = true
+                                }
                                 .background(
-                                    color = if (isFocused) Color(0xFF3B82F6).copy(alpha = 0.8f) else if (isSelected) Color(0xFF3B82F6).copy(alpha = 0.2f) else Color.Transparent,
+                                    color = if (isFocused) Color(0xFF38BDF8).copy(alpha = 0.15f) else if (isSelected) Color(0xFFFFFFFF).copy(alpha = 0.05f) else Color.Transparent,
                                     shape = RoundedCornerShape(12.dp)
                                 )
-                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                                .border(
+                                    width = if (isFocused) 2.dp else 1.dp,
+                                    color = if (isFocused) Color(0xFF38BDF8) else if (isSelected) Color.White.copy(alpha = 0.1f) else Color.Transparent,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                            contentAlignment = Alignment.CenterStart
                         ) {
                             Text(
-                                text = category,
-                                color = Color.White.copy(alpha = alpha),
-                                fontSize = 18.sp,
-                                fontWeight = if (isFocused || isSelected) FontWeight.Bold else FontWeight.Medium
+                                text = category.uppercase(),
+                                fontSize = if (isFocused) 17.sp else 16.sp,
+                                fontWeight = if (isFocused || isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isFocused) Color.White else if (isSelected) Color(0xFFE2E8F0) else Color(0xFF94A3B8),
+                                letterSpacing = 1.sp
                             )
                         }
                     }
@@ -356,48 +375,74 @@ fun CategoryScreen(
             }
 
             // RIGHT PANE - Channels Grid
-            Column(
-                modifier = Modifier
-                    .weight(0.75f)
-                    .fillMaxHeight()
-                    .padding(top = 24.dp, start = 24.dp, end = 24.dp)
-            ) {
-                Text(
-                    text = currentCategory,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(bottom = 24.dp)
-                )
-
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 160.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 24.dp),
-                    modifier = Modifier.fillMaxSize()
+            val rightPaneWeight = 1f - categoryWeight
+            
+            if (rightPaneWeight > 0.05f) {
+                Column(
+                    modifier = Modifier
+                        .weight(rightPaneWeight)
+                        .fillMaxHeight()
+                        .padding(start = 24.dp, top = 32.dp, end = 32.dp)
                 ) {
-                    items(channelsInCurrentCategory) { channel ->
-                        val focusRequester = channelFocusRequesters.getOrPut(channel.getResolvedId()) { FocusRequester() }
-                        
-                        ChannelCard(
-                            channel = channel,
-                            focusRequester = focusRequester,
-                            onClick = {
-                                viewModel.lastSelectedChannelId = channel.getResolvedId()
-                                onChannelSelected(channel)
-                            },
-                            onLongClick = {
-                                viewModel.lastSelectedChannelId = channel.getResolvedId()
-                                activeChannelForMenu = channel
-                            },
-                            onFocusGained = {
-                                isCategoryListFocused = false
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isCategorySelected,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { 50 }),
+                        exit = androidx.compose.animation.fadeOut()
+                    ) {
+                        Column {
+                            Text(
+                                text = currentCategory.uppercase(),
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.padding(bottom = 24.dp)
+                            )
+
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 180.dp),
+                                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(20.dp),
+                                contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 32.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(channelsInCurrentCategory) { channel ->
+                                    val focusRequester = channelFocusRequesters.getOrPut(channel.getResolvedId()) { FocusRequester() }
+                                    
+                                    ChannelCard(
+                                        channel = channel,
+                                        focusRequester = focusRequester,
+                                        onClick = {
+                                            viewModel.lastSelectedChannelId = channel.getResolvedId()
+                                            onChannelSelected(channel)
+                                        },
+                                        onLongClick = {
+                                            viewModel.lastSelectedChannelId = channel.getResolvedId()
+                                            activeChannelForMenu = channel
+                                        },
+                                        onFocusGained = {
+                                            isCategoryListFocused = false
+                                        }
+                                    )
+                                }
                             }
-                        )
+                        }
                     }
                 }
+            } else {
+                Spacer(modifier = Modifier.weight(0.001f))
             }
+        }
+
+        // BackHandler for Category selection state
+        BackHandler(enabled = isCategorySelected && activeChannelForMenu == null && !showSettingsDialog) {
+            isCategorySelected = false
+            categoryFocusRequesters[currentCategory]?.safeRequestFocus()
+        }
+
+        // BackHandler for App Exit
+        BackHandler(enabled = !isCategorySelected && !showExitDialog && activeChannelForMenu == null && !showSettingsDialog && isCategoryListFocused) {
+            showExitDialog = true
         }
 
         // Overlay Dialogs
