@@ -392,7 +392,10 @@ fun CategoryScreen(
         if (showExitDialog) {
             ExitDialog(
                 onDismiss = { showExitDialog = false },
-                onExit = { activity?.finish() }
+                onExit = { 
+                    showExitDialog = false
+                    activity?.finish() 
+                }
             )
         }
 
