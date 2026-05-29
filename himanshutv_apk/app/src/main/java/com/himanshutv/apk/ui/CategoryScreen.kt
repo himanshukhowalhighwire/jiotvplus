@@ -176,9 +176,9 @@ fun CategoryScreen(
 
     LaunchedEffect(autoReplayId) {
         if (autoReplayId != null) {
-            onReplayHandled()
             delay(150)
             onNavigateToPlayer(autoReplayId)
+            onReplayHandled()
         }
     }
 
