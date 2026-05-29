@@ -206,8 +206,8 @@ fun CategoryScreen(
     val currentCategory = viewModel.selectedCategory ?: categories.firstOrNull() ?: ""
     val channelsInCurrentCategory = viewModel.channelsByCategory[currentCategory] ?: emptyList()
 
-    val categoryFocusRequesters = remember(categories) { categories.associateWith { FocusRequester() } }
-    val channelFocusRequesters = remember(channelsInCurrentCategory) { channelsInCurrentCategory.associate { it.getResolvedId() to FocusRequester() } }
+    val categoryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val channelFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val settingsFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(viewModel.isLoading) {
@@ -318,7 +318,7 @@ fun CategoryScreen(
                                         viewModel.selectedCategory = category
                                     }
                                 }
-                                .focusRequester(categoryFocusRequesters[category] ?: FocusRequester())
+                                .focusRequester(categoryFocusRequesters.getOrPut(category) { FocusRequester() })
                                 .clickable { viewModel.selectedCategory = category }
                                 .background(
                                     color = if (isFocused) Color(0xFF3B82F6).copy(alpha = 0.8f) else if (isSelected) Color(0xFF3B82F6).copy(alpha = 0.2f) else Color.Transparent,
@@ -360,7 +360,7 @@ fun CategoryScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(channelsInCurrentCategory) { channel ->
-                        val focusRequester = channelFocusRequesters[channel.getResolvedId()] ?: FocusRequester()
+                        val focusRequester = channelFocusRequesters.getOrPut(channel.getResolvedId()) { FocusRequester() }
                         
                         ChannelCard(
                             channel = channel,

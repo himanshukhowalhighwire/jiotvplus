@@ -106,6 +106,7 @@ class MainActivity : ComponentActivity() {
                         if (startDestination == "home" && autoReplayId != null) {
                             val id = autoReplayId
                             autoReplayId = null
+                            kotlinx.coroutines.delay(150)
                             navController.navigate("player/$id")
                         }
                     }
