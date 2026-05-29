@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    LaunchedEffect(startDestination, autoReplayId) {
+                    LaunchedEffect(startDestination) {
                         if (startDestination == "home" && autoReplayId != null) {
                             val id = autoReplayId
                             autoReplayId = null

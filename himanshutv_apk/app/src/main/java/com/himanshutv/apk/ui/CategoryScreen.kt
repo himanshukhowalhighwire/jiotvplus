@@ -232,6 +232,13 @@ fun CategoryScreen(
         }
     }
 
+    LaunchedEffect(activeChannelForMenu) {
+        if (activeChannelForMenu == null && viewModel.lastSelectedChannelId != null) {
+            delay(100)
+            channelFocusRequesters[viewModel.lastSelectedChannelId]?.safeRequestFocus()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -370,6 +377,7 @@ fun CategoryScreen(
                                 onChannelSelected(channel)
                             },
                             onLongClick = {
+                                viewModel.lastSelectedChannelId = channel.getResolvedId()
                                 activeChannelForMenu = channel
                             },
                             onFocusGained = {
