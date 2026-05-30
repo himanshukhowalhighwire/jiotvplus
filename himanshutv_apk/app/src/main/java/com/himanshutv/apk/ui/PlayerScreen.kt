@@ -76,11 +76,21 @@ class PlayerViewModel @Inject constructor(
             isLoading = true
             error = null
             dataStore.saveLastPlayedChannel(contentId)
-            val info = playbackRepository.getPlaybackRights(contentId)
-            if (info != null && info.streamUrl != null) {
-                playbackInfo = info
+            
+            if (contentId.startsWith("http")) {
+                playbackInfo = PlaybackInfo(
+                    streamUrl = contentId,
+                    keyUrl = null,
+                    isM3u8 = contentId.contains("m3u8"),
+                    playbackToken = null
+                )
             } else {
-                error = "Failed to fetch playback rights for this channel."
+                val info = playbackRepository.getPlaybackRights(contentId)
+                if (info != null && info.streamUrl != null) {
+                    playbackInfo = info
+                } else {
+                    error = "Failed to fetch playback rights for this channel."
+                }
             }
             isLoading = false
         }
@@ -207,13 +217,17 @@ class PlayerViewModel @Inject constructor(
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(headers)
 
-        val resolver = com.himanshutv.apk.player.HimanshuStreamResolver(
-            contentId = contentId,
-            playbackRepository = playbackRepository,
-            dataStore = dataStore,
-            initialPlaybackInfo = info
-        )
-        val dataSourceFactory = androidx.media3.datasource.ResolvingDataSource.Factory(baseDataSourceFactory, resolver)
+        val dataSourceFactory = if (contentId.startsWith("http")) {
+            baseDataSourceFactory
+        } else {
+            val resolver = com.himanshutv.apk.player.HimanshuStreamResolver(
+                contentId = contentId,
+                playbackRepository = playbackRepository,
+                dataStore = dataStore,
+                initialPlaybackInfo = info
+            )
+            androidx.media3.datasource.ResolvingDataSource.Factory(baseDataSourceFactory, resolver)
+        }
 
         val mediaItemBuilder = MediaItem.Builder()
             .setUri(streamUrl)

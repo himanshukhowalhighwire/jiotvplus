@@ -55,11 +55,11 @@ class ChannelRepository @Inject constructor(
                 val channels: List<Channel> = gson.fromJson(jsonStr, type)
                 channels
             } else {
-                emptyList()
+                SonyLivChannels.channels
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            SonyLivChannels.channels
         }
     }
 
@@ -73,9 +73,9 @@ class ChannelRepository @Inject constructor(
     }
 
     private suspend fun fetchFromNetwork(): List<Channel> {
-        val uniqueId = dataStore.uniqueId.firstOrNull() ?: return emptyList()
-        val subId = dataStore.subscriberId.firstOrNull() ?: return emptyList()
-        val accessToken = dataStore.accessToken.firstOrNull() ?: dataStore.ssoToken.firstOrNull() ?: return emptyList()
+        val uniqueId = dataStore.uniqueId.firstOrNull() ?: return SonyLivChannels.channels
+        val subId = dataStore.subscriberId.firstOrNull() ?: return SonyLivChannels.channels
+        val accessToken = dataStore.accessToken.firstOrNull() ?: dataStore.ssoToken.firstOrNull() ?: return SonyLivChannels.channels
 
         return try {
             val response = metadataApi.getChannels(uniqueId = uniqueId, subId = subId, accessToken = accessToken)
@@ -86,18 +86,18 @@ class ChannelRepository @Inject constructor(
                     if (dataElement.isJsonArray) {
                         val type = object : TypeToken<List<Channel>>() {}.type
                         val channels: List<Channel> = gson.fromJson(dataElement, type)
-                        return channels.filter { it.getResolvedId().isNotEmpty() }
+                        return SonyLivChannels.channels + channels.filter { it.getResolvedId().isNotEmpty() }
                     } else if (dataElement.isJsonObject) {
                         val type = object : TypeToken<Map<String, Channel>>() {}.type
                         val channelMap: Map<String, Channel> = gson.fromJson(dataElement, type)
-                        return channelMap.values.filter { it.getResolvedId().isNotEmpty() }
+                        return SonyLivChannels.channels + channelMap.values.filter { it.getResolvedId().isNotEmpty() }
                     }
                 }
             }
-            emptyList()
+            SonyLivChannels.channels
         } catch (e: Exception) {
             e.printStackTrace()
-            emptyList()
+            SonyLivChannels.channels
         }
     }
 }

@@ -126,10 +126,12 @@ class MainActivity : ComponentActivity() {
                                 autoReplayId = autoReplayId,
                                 onReplayHandled = { autoReplayId = null },
                                 onChannelSelected = { channel ->
-                                    navController.navigate("player/${channel.getResolvedId()}")
+                                    val encodedId = java.net.URLEncoder.encode(channel.getResolvedId(), "UTF-8")
+                                    navController.navigate("player/$encodedId")
                                 },
                                 onNavigateToPlayer = { id ->
-                                    navController.navigate("player/$id")
+                                    val encodedId = java.net.URLEncoder.encode(id, "UTF-8")
+                                    navController.navigate("player/$encodedId")
                                 }
                             )
                         }
@@ -137,7 +139,8 @@ class MainActivity : ComponentActivity() {
                             route = "player/{contentId}",
                             arguments = listOf(navArgument("contentId") { type = NavType.StringType })
                         ) { backStackEntry ->
-                            val contentId = backStackEntry.arguments?.getString("contentId") ?: return@composable
+                            val encodedContentId = backStackEntry.arguments?.getString("contentId") ?: return@composable
+                            val contentId = java.net.URLDecoder.decode(encodedContentId, "UTF-8")
                             val viewModel: PlayerViewModel = hiltViewModel()
                             PlayerScreen(
                                 contentId = contentId,
