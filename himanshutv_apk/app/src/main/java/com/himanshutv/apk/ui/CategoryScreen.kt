@@ -14,8 +14,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -184,9 +186,9 @@ fun CategoryScreen(
     }
     var showExitDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
-    var isCategoryListFocused by remember { mutableStateOf(true) }
+    var isCategoryListFocused by rememberSaveable { mutableStateOf(true) }
     var activeChannelForMenu by remember { mutableStateOf<Channel?>(null) }
-    var isCategorySelected by remember { mutableStateOf(false) }
+    var isCategorySelected by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(autoReplayId, viewModel.isLoading) {
         if (autoReplayId != null && !viewModel.isLoading) {
@@ -234,20 +236,28 @@ fun CategoryScreen(
     val categoryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val channelFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val settingsFocusRequester = remember { FocusRequester() }
+    val gridState = rememberLazyGridState()
+
+    LaunchedEffect(Unit) {
+        if (!isCategoryListFocused && viewModel.lastSelectedChannelId != null) {
+            delay(150)
+            channelFocusRequesters[viewModel.lastSelectedChannelId]?.safeRequestFocus()
+        }
+    }
 
     LaunchedEffect(viewModel.isLoading) {
         if (!viewModel.isLoading && viewModel.lastSelectedChannelId != null) {
             val lastCategory = viewModel.channelsByCategory.entries.find { entry ->
                 entry.value.any { it.getResolvedId() == viewModel.lastSelectedChannelId }
             }?.key
-            if (lastCategory != null) {
+            if (lastCategory != null && !isCategorySelected) {
                 viewModel.selectedCategory = lastCategory
                 isCategorySelected = true
                 isCategoryListFocused = false
                 delay(200)
                 channelFocusRequesters[viewModel.lastSelectedChannelId]?.safeRequestFocus()
             }
-        } else if (!viewModel.isLoading) {
+        } else if (!viewModel.isLoading && !isCategorySelected) {
             delay(150)
             categoryFocusRequesters[currentCategory]?.safeRequestFocus()
         }
@@ -426,6 +436,7 @@ fun CategoryScreen(
                             )
 
                             LazyVerticalGrid(
+                                state = gridState,
                                 columns = GridCells.Fixed(4),
                                 horizontalArrangement = Arrangement.spacedBy(20.dp),
                                 verticalArrangement = Arrangement.spacedBy(20.dp),
