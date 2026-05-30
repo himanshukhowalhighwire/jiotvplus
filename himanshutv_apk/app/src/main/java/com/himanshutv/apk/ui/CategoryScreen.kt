@@ -173,9 +173,10 @@ fun CategoryScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var isCategoryListFocused by remember { mutableStateOf(true) }
     var activeChannelForMenu by remember { mutableStateOf<Channel?>(null) }
+    var isCategorySelected by remember { mutableStateOf(false) }
 
-    LaunchedEffect(autoReplayId) {
-        if (autoReplayId != null) {
+    LaunchedEffect(autoReplayId, viewModel.isLoading) {
+        if (autoReplayId != null && !viewModel.isLoading) {
             delay(150)
             onNavigateToPlayer(autoReplayId)
             onReplayHandled()
@@ -221,6 +222,8 @@ fun CategoryScreen(
             }?.key
             if (lastCategory != null) {
                 viewModel.selectedCategory = lastCategory
+                isCategorySelected = true
+                isCategoryListFocused = false
                 delay(200)
                 channelFocusRequesters[viewModel.lastSelectedChannelId]?.safeRequestFocus()
             }
@@ -243,7 +246,7 @@ fun CategoryScreen(
         }
     }
 
-    var isCategorySelected by remember { mutableStateOf(false) }
+
     val categoryWeight by animateFloatAsState(targetValue = if (isCategorySelected) 0.28f else 1f)
 
     Box(
