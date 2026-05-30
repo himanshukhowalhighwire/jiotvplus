@@ -76,9 +76,22 @@ class CategoryViewModel @Inject constructor(
     private fun loadChannels() {
         viewModelScope.launch {
             isLoading = true
-            allChannelsList = channelRepository.getChannels()
-            updateGroupedChannels()
-            isLoading = false
+            channelRepository.getChannels(forceRefresh = false).collect { channels ->
+                allChannelsList = channels
+                updateGroupedChannels()
+                isLoading = false
+            }
+        }
+    }
+
+    fun reloadChannels() {
+        viewModelScope.launch {
+            isLoading = true
+            channelRepository.getChannels(forceRefresh = true).collect { channels ->
+                allChannelsList = channels
+                updateGroupedChannels()
+                isLoading = false
+            }
         }
     }
 
@@ -210,6 +223,13 @@ fun CategoryScreen(
     val categories = viewModel.channelsByCategory.keys.toList()
     val currentCategory = viewModel.selectedCategory ?: categories.firstOrNull() ?: ""
     val channelsInCurrentCategory = viewModel.channelsByCategory[currentCategory] ?: emptyList()
+    var frozenChannels by remember { mutableStateOf(channelsInCurrentCategory) }
+    
+    LaunchedEffect(channelsInCurrentCategory, isCategorySelected) {
+        if (isCategorySelected) {
+            frozenChannels = channelsInCurrentCategory
+        }
+    }
 
     val categoryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val channelFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
@@ -343,9 +363,12 @@ fun CategoryScreen(
                                 .onFocusChanged {
                                     isFocused = it.isFocused
                                     if (it.isFocused) {
+                                        val wasCategorySelected = isCategorySelected
                                         isCategoryListFocused = true
                                         isCategorySelected = false
-                                        viewModel.selectedCategory = category
+                                        if (!wasCategorySelected) {
+                                            viewModel.selectedCategory = category
+                                        }
                                     }
                                 }
                                 .focusRequester(categoryFocusRequesters.getOrPut(category) { FocusRequester() })
@@ -409,7 +432,7 @@ fun CategoryScreen(
                                 contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 32.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(channelsInCurrentCategory) { channel ->
+                                items(frozenChannels) { channel ->
                                     val focusRequester = channelFocusRequesters.getOrPut(channel.getResolvedId()) { FocusRequester() }
                                     
                                     ChannelCard(
@@ -688,6 +711,54 @@ fun SettingsDialog(
                     text = if (viewModel.autoStartOnBootEnabled) "ON" else "OFF",
                     color = if (viewModel.autoStartOnBootEnabled) Color(0xFF34D399) else Color(0xFFF87171),
                     fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            var isReloadFocused by remember { mutableStateOf(false) }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { isReloadFocused = it.isFocused }
+                    .clickable { 
+                        viewModel.reloadChannels()
+                        onDismiss()
+                    }
+                    .background(
+                        color = if (isReloadFocused) Color(0xFF3B82F6).copy(alpha = 0.3f) else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .border(
+                        width = 2.dp,
+                        color = if (isReloadFocused) Color(0xFF3B82F6) else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Reload Channels",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Force refresh the channel list from the network",
+                        color = Color(0xFF94A3B8),
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                
+                Text(
+                    text = "↻",
+                    color = Color(0xFF38BDF8),
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
