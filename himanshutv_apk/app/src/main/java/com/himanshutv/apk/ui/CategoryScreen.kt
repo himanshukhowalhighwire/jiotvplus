@@ -425,16 +425,6 @@ fun CategoryScreen(
                         .weight(rightPaneWeight)
                         .fillMaxHeight()
                         .padding(start = 24.dp, top = 32.dp, end = 32.dp)
-                        .onKeyEvent { keyEvent ->
-                            if (keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
-                                try {
-                                    categoryFocusRequesters[currentCategory]?.requestFocus() ?: settingsFocusRequester.requestFocus()
-                                } catch (e: Exception) {}
-                                true
-                            } else {
-                                false
-                            }
-                        }
                 ) {
                     androidx.compose.animation.AnimatedVisibility(
                         visible = isCategorySelected,
