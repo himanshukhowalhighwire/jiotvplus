@@ -425,6 +425,16 @@ fun CategoryScreen(
                         .weight(rightPaneWeight)
                         .fillMaxHeight()
                         .padding(start = 24.dp, top = 32.dp, end = 32.dp)
+                        .onKeyEvent { keyEvent ->
+                            if (keyEvent.nativeKeyEvent.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && keyEvent.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                                try {
+                                    categoryFocusRequesters[currentCategory]?.requestFocus() ?: settingsFocusRequester.requestFocus()
+                                } catch (e: Exception) {}
+                                true
+                            } else {
+                                false
+                            }
+                        }
                 ) {
                     androidx.compose.animation.AnimatedVisibility(
                         visible = isCategorySelected,
@@ -598,8 +608,16 @@ fun ChannelCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val imageRequest = remember(channel.getResolvedLogo()) {
+                coil.request.ImageRequest.Builder(context)
+                    .data(channel.getResolvedLogo())
+                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64 AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .addHeader("Referer", "https://www.sonypicturesnetworks.com/")
+                    .build()
+            }
             AsyncImage(
-                model = channel.getResolvedLogo(),
+                model = imageRequest,
                 contentDescription = channel.getResolvedName(),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = 4.dp)
