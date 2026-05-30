@@ -39,6 +39,9 @@ android {
 }
 
 dependencies {
+    // Splash Screen
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
     // Android TV Compose
     implementation("androidx.tv:tv-foundation:1.0.0-alpha10")
     implementation("androidx.tv:tv-material:1.0.0-alpha10")

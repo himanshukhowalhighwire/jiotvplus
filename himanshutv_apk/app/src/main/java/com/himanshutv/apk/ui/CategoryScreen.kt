@@ -426,7 +426,7 @@ fun CategoryScreen(
                             )
 
                             LazyVerticalGrid(
-                                columns = GridCells.Adaptive(minSize = 180.dp),
+                                columns = GridCells.Fixed(4),
                                 horizontalArrangement = Arrangement.spacedBy(20.dp),
                                 verticalArrangement = Arrangement.spacedBy(20.dp),
                                 contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 32.dp),
