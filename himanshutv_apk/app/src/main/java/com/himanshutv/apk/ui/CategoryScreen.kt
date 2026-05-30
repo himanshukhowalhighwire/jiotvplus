@@ -479,8 +479,8 @@ fun CategoryScreen(
 
         // BackHandler for Category selection state
         BackHandler(enabled = isCategorySelected && activeChannelForMenu == null && !showSettingsDialog) {
-            isCategorySelected = false
             categoryFocusRequesters[currentCategory]?.safeRequestFocus()
+            isCategorySelected = false
         }
 
         // BackHandler for App Exit
