@@ -21,7 +21,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -192,7 +194,7 @@ fun CategoryScreen(
 
     LaunchedEffect(autoReplayId, viewModel.isLoading) {
         if (autoReplayId != null && !viewModel.isLoading) {
-            delay(150)
+            delay(800)
             onNavigateToPlayer(autoReplayId)
             onReplayHandled()
         }
@@ -254,6 +256,11 @@ fun CategoryScreen(
                 viewModel.selectedCategory = lastCategory
                 isCategorySelected = true
                 isCategoryListFocused = false
+                val channels = viewModel.channelsByCategory[lastCategory] ?: emptyList()
+                val index = channels.indexOfFirst { it.getResolvedId() == viewModel.lastSelectedChannelId }
+                if (index >= 0) {
+                    gridState.scrollToItem(index)
+                }
                 delay(200)
                 channelFocusRequesters[viewModel.lastSelectedChannelId]?.safeRequestFocus()
             }
@@ -536,7 +543,10 @@ fun ChannelCard(
     Box(
         modifier = Modifier
             .aspectRatio(16f / 9f)
-            .scale(scale)
+            .graphicsLayer { 
+                scaleX = scale
+                scaleY = scale
+            }
             .onFocusChanged { 
                 isFocused = it.isFocused
                 if (it.isFocused) onFocusGained()
@@ -584,12 +594,26 @@ fun ChannelCard(
             .clip(RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
-        AsyncImage(
-            model = channel.getResolvedLogo(),
-            contentDescription = channel.getResolvedName(),
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize().padding(12.dp)
-        )
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            AsyncImage(
+                model = channel.getResolvedLogo(),
+                contentDescription = channel.getResolvedName(),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(bottom = 4.dp)
+            )
+            Text(
+                text = channel.getResolvedName(),
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
