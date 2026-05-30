@@ -11,10 +11,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.tv.foundation.lazy.grid.TvGridCells
+import androidx.tv.foundation.lazy.grid.TvLazyVerticalGrid
+import androidx.tv.foundation.lazy.grid.items
+import androidx.tv.foundation.lazy.grid.rememberTvLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -167,7 +167,7 @@ class CategoryViewModel @Inject constructor(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.tv.foundation.ExperimentalTvFoundationApi::class)
 @Composable
 fun CategoryScreen(
     autoReplayId: String? = null,
@@ -237,7 +237,7 @@ fun CategoryScreen(
     val categoryFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val channelFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val settingsFocusRequester = remember { FocusRequester() }
-    val gridState = rememberLazyGridState()
+    val gridState = rememberTvLazyGridState()
 
     LaunchedEffect(Unit) {
         if (!isCategoryListFocused && viewModel.lastSelectedChannelId != null) {
@@ -451,9 +451,9 @@ fun CategoryScreen(
                                 modifier = Modifier.padding(bottom = 24.dp)
                             )
 
-                            LazyVerticalGrid(
+                            TvLazyVerticalGrid(
                                 state = gridState,
-                                columns = GridCells.Fixed(4),
+                                columns = TvGridCells.Fixed(4),
                                 horizontalArrangement = Arrangement.spacedBy(20.dp),
                                 verticalArrangement = Arrangement.spacedBy(20.dp),
                                 contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 32.dp),
